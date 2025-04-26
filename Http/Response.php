@@ -26,7 +26,15 @@ class Response {
       return $this->codes[$code];
    }
 
-   public function json(int $code, string $message, mixed $data = null): void {
+   public function success(string $message, mixed $data = null, int $code = 200): void {
+      $this->json($message, $data, null, $code);
+   }
+
+   public function error(string $message, mixed $data = null, int $code = 417): void {
+      $this->json($message, $data, null, $code);
+   }
+
+   public function json(string $message, mixed $data = null, mixed $errors = null, int $code = 200, array $meta = []): void {
       header_remove();
       $this->status($code);
 
@@ -34,11 +42,21 @@ class Response {
       header('Content-type: application/json');
       header($_SERVER['SERVER_PROTOCOL'] . ' ' . $code . ' ' . $this->codes[$code], true, $code);
 
-      print(json_encode([
-         'status' => $code < 300,
-         'code' => $code,
+      $response = [
+         'success' => $code < 300,
          'message' => $message,
-         'data' => $data
-      ]));
+      ];
+
+      if (!is_null($data)) {
+         $response['data'] = $data;
+      } elseif (!is_null($errors)) {
+         $response['errors'] = $errors;
+      }
+
+      if (!empty($meta)) {
+         $response['meta'] = $meta;
+      }
+
+      print(json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
    }
 }
