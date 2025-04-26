@@ -1,0 +1,12 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\{module}\Models;
+
+use System\Model\Model;
+
+class {class} extends Model {
+   public function index() {
+   }
+}

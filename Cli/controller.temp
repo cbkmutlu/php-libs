@@ -1,0 +1,12 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\{module}\Controllers;
+
+use System\Controller\Controller;
+
+class {class} extends Controller {
+   public function index() {
+   }
+}
