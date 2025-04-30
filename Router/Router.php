@@ -17,7 +17,7 @@ class Router {
    private $ip = [];
    private $ssl = false;
    private $as = null;
-   private $callback = null;
+   private $error = null;
    private $groups = [];
    private $length = 0;
    private $names = [];
@@ -38,7 +38,7 @@ class Router {
          'as' => $this->as,
       ];
 
-      call_user_func($callback, $this);
+      call_user_func($callback);
 
       $this->prefix = '/';
       $this->middlewares = [];
@@ -162,10 +162,11 @@ class Router {
                }
 
                if (isset($route['middlewares'])) {
+
                   foreach ($route['middlewares'] as $middleware) {
                      [$controller, $method] = explode('@', $middleware['callback']);
 
-                     if (!class_exists($controller)) {
+                     if (class_exists($controller)) {
                         $container = $this->container->resolve($controller);
                         call_user_func_array([$container, $method], []);
                      }
@@ -179,10 +180,10 @@ class Router {
                   [$controller, $method] = explode('@', $route['callback']);
 
                   if (!class_exists($controller)) {
-                     throw new ExceptionHandler("Controller not found [{$controller}::{$method}]");
+                     throw new ExceptionHandler("Controller not found [{$controller}::{$method}]", 404);
                   }
                   if (!method_exists($controller, $method)) {
-                     throw new ExceptionHandler("Method not found [{$controller}::{$method}]");
+                     throw new ExceptionHandler("Method not found [{$controller}::{$method}]", 404);
                   }
 
                   $container = $this->container->resolve($controller);
@@ -195,7 +196,12 @@ class Router {
       }
 
       if (!$matched) {
-         $this->getError("Route not found [{$this->getUri()}]");
+         if ($this->error && is_callable($this->error)) {
+            call_user_func($this->error);
+         } else {
+            header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
+            throw new ExceptionHandler("Route not found [{$this->getUri()}]", 404);
+         }
       }
    }
 
@@ -217,8 +223,8 @@ class Router {
       return $this->names;
    }
 
-   public function error(object|callable $callback): void {
-      $this->callback = function () use ($callback) {
+   public function error(callable $callback): void {
+      $this->error = function () use ($callback) {
          call_user_func($callback, $this->getUri());
       };
    }
@@ -281,15 +287,6 @@ class Router {
       }
 
       return '/' . trim($uri, '/');
-   }
-
-   private function getError(string $message): void {
-      if ($this->callback && is_callable($this->callback)) {
-         call_user_func($this->callback);
-      } else {
-         header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
-         throw new ExceptionHandler($message);
-      }
    }
 
    private function checkIp(array $route): bool {
