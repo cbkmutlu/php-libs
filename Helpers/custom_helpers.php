@@ -11,7 +11,7 @@ if (!function_exists('dd')) {
       print_r($data);
       echo '</pre>';
 
-      if ($stop === true) {
+      if ($stop === true || ENV !== 'production') {
          exit();
       }
    }
@@ -163,6 +163,12 @@ if (!function_exists('array_serialize')) {
    function array_serialize(array $data, bool $prepend = true): string {
       $query = http_build_query($data, '', '&', PHP_QUERY_RFC3986);
       return $prepend && $query ? '?' . $query : $query;
+   }
+}
+
+if (!function_exists('array_keys_diff')) {
+   function array_keys_diff(array $array1, array $array2): bool {
+      return array_diff($array2, array_keys($array1)) || array_diff(array_keys($array1), $array2);
    }
 }
 
