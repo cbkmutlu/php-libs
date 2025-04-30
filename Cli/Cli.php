@@ -44,6 +44,10 @@ class Cli {
             switch ($params[0]) {
                case 'controller':
                   return $this->createController($params[1]);
+               case 'service':
+                  return $this->createService($params[1]);
+               case 'repository':
+                  return $this->createRepository($params[1]);
                case 'model':
                   return $this->createModel($params[1]);
                case 'middleware':
@@ -70,6 +74,8 @@ class Cli {
 
    private function help(): string {
       return $this->info('[controller]', 'light_blue') . "\t" . 'controller User/Register' . "\n" .
+         $this->info('[service]', 'light_blue') . "\t" . 'service User/Register' . "\n" .
+         $this->info('[repository]', 'light_blue') . "\t" . 'repository User/Register' . "\n" .
          $this->info('[model]', 'light_blue') . "\t\t" . 'model User/Register' . "\n" .
          $this->info('[middleware]', 'light_blue') . "\t" . 'middleware MyMiddleware' . "\n" .
          $this->info('[listener]', 'light_blue') . "\t" . 'listener MyListener' . "\n" .
@@ -116,6 +122,48 @@ class Cli {
       $this->dir($location);
       file_put_contents($file, $content);
       return $this->success('Controller successfully created: ' . $location);
+   }
+
+   private function createService(string $service): string {
+      if (!strpos($service, '/')) {
+         return $this->error('Invalid command: ' . $service);
+      }
+
+      [$module, $class] = explode('/', $service);
+      $location = "App/Modules/$module/Services";
+      $file = "$location/$class.php";
+
+      $template = file_get_contents('System/Cli/service.temp');
+      $content = str_replace(['{module}', '{class}'], [$module, $class], $template);
+
+      if (file_exists($file)) {
+         return $this->error('Service already exists: ' . $file);
+      }
+
+      $this->dir($location);
+      file_put_contents($file, $content);
+      return $this->success('Service successfully created: ' . $location);
+   }
+
+   private function createRepository(string $repository): string {
+      if (!strpos($repository, '/')) {
+         return $this->error('Invalid command: ' . $repository);
+      }
+
+      [$module, $class] = explode('/', $repository);
+      $location = "App/Modules/$module/Repositories";
+      $file = "$location/$class.php";
+
+      $template = file_get_contents('System/Cli/repository.temp');
+      $content = str_replace(['{module}', '{class}'], [$module, $class], $template);
+
+      if (file_exists($file)) {
+         return $this->error('Repository already exists: ' . $file);
+      }
+
+      $this->dir($location);
+      file_put_contents($file, $content);
+      return $this->success('Repository successfully created: ' . $location);
    }
 
    private function createModel(string $model): string {
