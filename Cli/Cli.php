@@ -8,8 +8,9 @@ class Cli {
    private $params;
    private $colors;
 
-   public function __construct(string $env) {
-      import_env($env);
+   public function __construct() {
+      $config = import_config('defines.app');
+      import_env($config['env']);
       $this->colors['black']         = '0;30';
       $this->colors['dark_gray']     = '1;30';
       $this->colors['blue']          = '0;34';
