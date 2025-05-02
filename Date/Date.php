@@ -8,7 +8,7 @@ use DateTime;
 use DateTimeImmutable;
 use DateTimeZone;
 use IntlDateFormatter;
-use System\Exception\ExceptionHandler;
+use System\Exception\SystemException;
 use System\Language\Language;
 
 class Date {
@@ -164,7 +164,7 @@ class Date {
             $this->datetime->setTimestamp($date->getTimestamp());
             $this->timestamp = $date->getTimestamp();
          } else {
-            throw new ExceptionHandler('Invalid date format');
+            throw new SystemException('Invalid date format');
          }
       }
 
@@ -298,7 +298,7 @@ class Date {
 
    public function compareDates(array $date = [], ?string $format = null): array {
       if (!isset($date[0]) || isset($date[2])) {
-         throw new ExceptionHandler('Invalid date format');
+         throw new SystemException('Invalid date format');
       }
 
       if (is_null($format)) {

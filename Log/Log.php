@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace System\Log;
 
-use System\Exception\ExceptionHandler;
+use System\Log\LogException;
 use System\Language\Language;
 
 class Log {
@@ -111,7 +111,7 @@ class Log {
       $this->checkPath();
       $path = $this->path . '/' . $this->prefix . date($this->file_format) . $this->extension;
       if (!file_put_contents($path, $message . "\n", FILE_APPEND | LOCK_EX)) {
-         throw new ExceptionHandler("Log file write error [{$path}]");
+         throw new LogException("Log file write error [{$path}]");
       }
 
       return true;
@@ -119,11 +119,11 @@ class Log {
 
    private function checkPath(): void {
       if (!check_path($this->path)) {
-         throw new ExceptionHandler("Log file upload directory is invalid [{$this->path}]");
+         throw new LogException("Log file upload directory is invalid [{$this->path}]");
       }
 
       if (!check_permission($this->path)) {
-         throw new ExceptionHandler("Log file upload directory is not writable [{$this->path}]");
+         throw new LogException("Log file upload directory is not writable [{$this->path}]");
       }
    }
 }

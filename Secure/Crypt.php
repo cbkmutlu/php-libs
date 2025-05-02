@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace System\Secure;
 
-use System\Exception\ExceptionHandler;
+use System\Exception\SystemException;
 
 class Crypt {
    private $crypt_algorithm;
@@ -41,7 +41,7 @@ class Crypt {
       $decrypted = openssl_decrypt($encrypted, $this->crypt_algorithm, hash($this->crypt_phrase, $key, true), 0, $iv);
 
       if (!$decrypted) {
-         throw new ExceptionHandler('Decoding failed');
+         throw new SystemException('Decoding failed');
       }
 
       return trim($decrypted);

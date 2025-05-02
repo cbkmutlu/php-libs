@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace System\Cache;
 
-use System\Exception\ExceptionHandler;
+use System\Exception\SystemException;
 
 class Cache {
    private $filename;
@@ -62,7 +62,7 @@ class Cache {
             $content = json_encode($content);
             $this->writeFile($content);
          } else {
-            throw new ExceptionHandler("Cache key not found [{$name}]");
+            throw new SystemException("Cache key not found [{$name}]");
          }
       }
    }
@@ -137,7 +137,7 @@ class Cache {
    public function writeFile(string $content): bool {
       $path = $this->checkFile();
       if (!file_put_contents($path, $content)) {
-         throw new ExceptionHandler("Cache file write error [{$path}]");
+         throw new SystemException("Cache file write error [{$path}]");
       }
 
       return true;
@@ -165,11 +165,11 @@ class Cache {
 
    private function checkPath(): void {
       if (!check_path($this->path)) {
-         throw new ExceptionHandler("Cache file upload directory is invalid [{$this->path}]");
+         throw new SystemException("Cache file upload directory is invalid [{$this->path}]");
       }
 
       if (!check_permission($this->path)) {
-         throw new ExceptionHandler("Cache file upload directory is not writable [{$this->path}]");
+         throw new SystemException("Cache file upload directory is not writable [{$this->path}]");
       }
    }
 

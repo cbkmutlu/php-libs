@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use System\Exception\ExceptionHandler;
+use System\Exception\SystemException;
 use System\Starter\Starter;
 
 if (!function_exists('dd')) {
@@ -188,7 +188,7 @@ if (!function_exists('import_asset')) {
    function import_asset(?string $file = null, mixed $version = null): mixed {
       if (!is_null($file)) {
          if (!file_exists(ROOT_DIR . '/Public/' . $file)) {
-            throw new ExceptionHandler("File not found in Public directory [{$file}]");
+            throw new SystemException("File not found in Public directory [{$file}]");
          }
 
          if (!is_null($version)) {
@@ -205,7 +205,7 @@ if (!function_exists('import_asset')) {
 if (!function_exists('import_file')) {
    function import_file(string $file, bool $once = false): int {
       if (!file_exists($file = APP_DIR . $file . '.php')) {
-         throw new ExceptionHandler("File not found [{$file}]");
+         throw new SystemException("File not found [{$file}]");
       }
 
       return ($once === true) ? require_once $file : require $file;
@@ -217,7 +217,7 @@ if (!function_exists('import_config')) {
       [$file, $value] = explode('.', $params, 2);
 
       if (!file_exists($path = APP_DIR . 'Config/' . ucwords($file) . '.php')) {
-         throw new ExceptionHandler("File not found in Config directory [{$path}]");
+         throw new SystemException("File not found in Config directory [{$path}]");
       }
 
       $config = require $path;
@@ -225,7 +225,7 @@ if (!function_exists('import_config')) {
 
       foreach ($keys as $key) {
          if (!isset($config[$key])) {
-            throw new ExceptionHandler("Invalid key [{$key}]");
+            throw new SystemException("Invalid key [{$key}]");
          }
          $config = $config[$key];
       }

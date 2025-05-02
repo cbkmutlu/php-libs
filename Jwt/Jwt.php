@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace System\Jwt;
 
-use System\Exception\ExceptionHandler;
+use System\Jwt\JwtException;
 
 class Jwt {
    private $secret;
@@ -88,13 +88,13 @@ class Jwt {
       }
 
       if (!$this->verifySignature("$headerEncoded.$payloadEncoded", $signature, $secret, $header->alg)) {
-         throw new ExceptionHandler('Signature verification failed');
+         throw new JwtException('Signature verification failed');
       }
 
       $this->checkClaim($payload);
 
       if ($this->revoker && isset($payload->jti) && ($this->revoker)($payload->jti)) {
-         throw new ExceptionHandler('Token revoked');
+         throw new JwtException('Token revoked');
       }
 
       return $payload;
@@ -124,7 +124,7 @@ class Jwt {
          $result = openssl_sign($data, $signature, $secret, $this->algorithms[$algorithm]['hash']);
 
          if (!$result) {
-            throw new ExceptionHandler('OpenSSL unable to sign data');
+            throw new JwtException('OpenSSL unable to sign data');
          }
 
          return $signature;
@@ -148,43 +148,43 @@ class Jwt {
       $timestamp = time();
 
       if (isset($payload->nbf) && ($payload->nbf - $this->leeway) > $timestamp) {
-         throw new ExceptionHandler('Token not yet valid');
+         throw new JwtException('Token not yet valid');
       }
 
       if (isset($payload->exp) && ($timestamp + $this->leeway) >= $payload->exp) {
-         throw new ExceptionHandler('Token expired');
+         throw new JwtException('Token expired');
       }
 
       if ($this->issuer && isset($payload->iss) && $payload->iss !== $this->claims['iss']) {
-         throw new ExceptionHandler('Invalid issuer');
+         throw new JwtException('Invalid issuer');
       }
 
       if ($this->audience && isset($payload->aud) && $payload->aud !== $this->claims['aud']) {
-         throw new ExceptionHandler('Invalid audience');
+         throw new JwtException('Invalid audience');
       }
 
       if ($this->claims['jti']) {
          if (!isset($payload->jti)) {
-            throw new ExceptionHandler('Missing JTI in token');
+            throw new JwtException('Missing JTI in token');
          }
          if ($payload->jti !== $this->claims['jti']) {
-            throw new ExceptionHandler('Invalid token ID');
+            throw new JwtException('Invalid token ID');
          }
       }
    }
 
    private function checkAlgorithm(?string $algorithm = null): void {
       if (is_null($algorithm)) {
-         throw new ExceptionHandler('Empty algorithm');
+         throw new JwtException('Empty algorithm');
       }
 
       if (!isset($this->algorithms[$algorithm])) {
-         throw new ExceptionHandler('Unsupported algorithm');
+         throw new JwtException('Unsupported algorithm');
       }
 
       if (str_starts_with($algorithm, 'RS') || str_starts_with($algorithm, 'ES')) {
          if (!extension_loaded('openssl')) {
-            throw new ExceptionHandler('OpenSSL extension required');
+            throw new JwtException('OpenSSL extension required');
          }
       }
    }
@@ -195,7 +195,7 @@ class Jwt {
       if (function_exists('json_last_error') && $errno = json_last_error()) {
          $this->jsonError($errno);
       } elseif ($json === 'null' && $data) {
-         throw new ExceptionHandler('Null result with non-null input');
+         throw new JwtException('Null result with non-null input');
       }
 
       return $json;
@@ -213,7 +213,7 @@ class Jwt {
       if (function_exists('json_last_error') && $errno = json_last_error()) {
          $this->jsonError($errno);
       } elseif (!$obj && $data !== 'null') {
-         throw new ExceptionHandler('Null result with non-null input');
+         throw new JwtException('Null result with non-null input');
       }
 
       return $obj;
@@ -228,7 +228,7 @@ class Jwt {
          JSON_ERROR_UTF8 => 'Malformed UTF-8 characters'
       ];
 
-      throw new ExceptionHandler(isset($messages[$errno]) ? $messages[$errno] : "Unknown JSON error [{$errno}]");
+      throw new JwtException(isset($messages[$errno]) ? $messages[$errno] : "Unknown JSON error [{$errno}]");
    }
 
    private function base64UrlEncode(string $data): string {

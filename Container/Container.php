@@ -6,7 +6,7 @@ namespace System\Container;
 
 use ReflectionClass;
 use ReflectionNamedType;
-use System\Exception\ExceptionHandler;
+use System\Exception\SystemException;
 
 class Container {
    private $providers;
@@ -49,7 +49,7 @@ class Container {
       }
 
       if (!isset($this->services[$name])) {
-         throw new ExceptionHandler("Service not found [{$name}]");
+         throw new SystemException("Service not found [{$name}]");
       }
 
       $service = $this->services[$name];
@@ -60,7 +60,7 @@ class Container {
       } elseif (is_object($definition)) {
          $instance = $definition;
       } else {
-         throw new ExceptionHandler("Service definition must be callable or object [{$name}]");
+         throw new SystemException("Service definition must be callable or object [{$name}]");
       }
 
       if ($service['singleton']) {
@@ -77,7 +77,7 @@ class Container {
 
       $reflection = $this->reflections[$class];
       if (!$reflection->isInstantiable()) {
-         throw new ExceptionHandler("Class is not instantiable [{$class}]");
+         throw new SystemException("Class is not instantiable [{$class}]");
       }
 
       $constructor = $reflection->getConstructor();
@@ -116,7 +116,7 @@ class Container {
             return $parameter->getDefaultValue();
          }
 
-         throw new ExceptionHandler("Cannot resolve parameter [{$parameter->getName()}] of type [{$type}].");
+         throw new SystemException("Cannot resolve parameter [{$parameter->getName()}] of type [{$type}].");
       }, $parameters);
 
       $instance = $reflection->newInstanceWithoutConstructor();

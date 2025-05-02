@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace System\View;
 
-use System\Exception\ExceptionHandler;
+use System\Exception\SystemException;
 
 class View {
 	private $theme = null;
@@ -29,7 +29,7 @@ class View {
 
 	private function import(string $file, array $data = []): void {
 		if (!file_exists($file)) {
-			throw new ExceptionHandler("View file not found [{$file}]");
+			throw new SystemException("View file not found [{$file}]");
 		}
 
 		extract($data);

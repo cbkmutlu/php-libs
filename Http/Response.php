@@ -26,14 +26,6 @@ class Response {
       return $this->codes[$code];
    }
 
-   public function success(mixed $data = null, ?string $message = null, int $code = 200): void {
-      $this->json($message, $data, null, $code);
-   }
-
-   public function error(?string $message = null, mixed $error = null, int $code = 400): void {
-      $this->json($message, null, $error, $code);
-   }
-
    public function json(?string $message = null, mixed $data = null, mixed $error = null, int $code = 200, ?array $meta = null): void {
       header_remove();
       $this->status($code);

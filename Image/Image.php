@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace System\Image;
 
-use System\Exception\ExceptionHandler;
+use System\Exception\SystemException;
 
 class Image {
    private $image;
@@ -19,7 +19,7 @@ class Image {
 
    public function __construct() {
       if (!extension_loaded('gd')) {
-         throw new ExceptionHandler('GD extension is not active');
+         throw new SystemException('GD extension is not active');
       }
 
       $config = import_config('defines.image');
@@ -33,17 +33,17 @@ class Image {
    public function data(string $path): self {
       $image = file_get_contents($path, false, stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]));
       if ($image === false) {
-         throw new ExceptionHandler("Could not load image [{$path}]");
+         throw new SystemException("Could not load image [{$path}]");
       }
 
       $info = getimagesizefromstring($image);
       if ($info === false) {
-         throw new ExceptionHandler('Invalid image data');
+         throw new SystemException('Invalid image data');
       }
 
       $this->mime = $info['mime'];
       if (!in_array($this->mime, self::SUPPORTED_MIMES)) {
-         throw new ExceptionHandler('Unsupported image type');
+         throw new SystemException('Unsupported image type');
       }
 
       $this->image = imagecreatefromstring($image);
@@ -196,7 +196,7 @@ class Image {
       ob_end_clean();
 
       if (!file_put_contents($path, $data)) {
-         throw new ExceptionHandler("Image file save error [{$path}]");
+         throw new SystemException("Image file save error [{$path}]");
       }
 
       return true;
@@ -231,7 +231,7 @@ class Image {
             break;
          case 'image/webp':
             if (!function_exists('imagewebp')) {
-               throw new ExceptionHandler('WebP image type is not supported');
+               throw new SystemException('WebP image type is not supported');
             }
             imagesavealpha($this->image, true);
             imagewebp($this->image, null, $this->quality);
@@ -243,7 +243,7 @@ class Image {
             imagebmp($this->image, null, true);
             break;
          default:
-            throw new ExceptionHandler('Unsupported image type');
+            throw new SystemException('Unsupported image type');
       }
    }
 
@@ -317,11 +317,11 @@ class Image {
 
    private function checkPath(): void {
       if (!check_path($this->path)) {
-         throw new ExceptionHandler("Image file upload directory is invalid [{$this->path}]");
+         throw new SystemException("Image file upload directory is invalid [{$this->path}]");
       }
 
       if (!check_permission($this->path)) {
-         throw new ExceptionHandler("Image file upload directory is not writable [{$this->path}]");
+         throw new SystemException("Image file upload directory is not writable [{$this->path}]");
       }
    }
 

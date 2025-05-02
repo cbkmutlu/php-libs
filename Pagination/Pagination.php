@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace System\Pagination;
 
-use System\Exception\ExceptionHandler;
+use System\Exception\SystemException;
 
 class Pagination {
    private $max_pages = 5;
@@ -16,7 +16,7 @@ class Pagination {
 
    public function setMaxPages(int $value): self {
       if ($value < 3) {
-         throw new ExceptionHandler('Max pages must be at least 3');
+         throw new SystemException('Max pages must be at least 3');
       }
       $this->max_pages = $value;
       return $this;
@@ -24,7 +24,7 @@ class Pagination {
 
    public function setItemsPerPage(int $value): self {
       if ($value < 1) {
-         throw new ExceptionHandler('Items per page must be at least 1');
+         throw new SystemException('Items per page must be at least 1');
       }
       $this->items_perpage = $value;
       return $this;
@@ -32,7 +32,7 @@ class Pagination {
 
    public function setCurrentPage(int $value): self {
       if ($value < 1) {
-         throw new ExceptionHandler('Current page must be at least 1');
+         throw new SystemException('Current page must be at least 1');
       }
       $this->current_page = $value;
       return $this;
@@ -40,7 +40,7 @@ class Pagination {
 
    public function setTotalItems(int $value): self {
       if ($value < 1) {
-         throw new ExceptionHandler('Total items must be at least 1');
+         throw new SystemException('Total items must be at least 1');
       }
       $this->total_items = $value;
       return $this;
@@ -48,7 +48,7 @@ class Pagination {
 
    public function setUrlPattern(string $pattern): self {
       if (strpos($pattern, '%s') === false) {
-         throw new ExceptionHandler('Url pattern must contain %s');
+         throw new SystemException('Url pattern must contain %s');
       }
       $this->url_pattern = $pattern;
       return $this;

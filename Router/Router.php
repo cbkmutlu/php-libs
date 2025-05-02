@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace System\Router;
 
 use System\Container\Container;
-use System\Exception\ExceptionHandler;
+use System\Router\RouterException;
 
 class Router {
-   private $container;
    private $routes = [];
    private $prefix = '/';
    private $module = null;
@@ -22,8 +21,9 @@ class Router {
    private $length = 0;
    private $names = [];
 
-   public function __construct(Container $container) {
-      $this->container = $container;
+   public function __construct(
+      private Container $container
+   ) {
    }
 
    public function group(callable $callback): void {
@@ -180,10 +180,10 @@ class Router {
                   [$controller, $method] = explode('@', $route['callback']);
 
                   if (!class_exists($controller)) {
-                     throw new ExceptionHandler("Controller not found [{$controller}::{$method}]", 404);
+                     throw new RouterException("Controller not found [{$controller}::{$method}]");
                   }
                   if (!method_exists($controller, $method)) {
-                     throw new ExceptionHandler("Method not found [{$controller}::{$method}]", 404);
+                     throw new RouterException("Method not found [{$controller}::{$method}]");
                   }
 
                   $container = $this->container->resolve($controller);
@@ -200,7 +200,7 @@ class Router {
             call_user_func($this->error);
          } else {
             header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
-            throw new ExceptionHandler("Route not found [{$this->getUri()}]", 404);
+            throw new RouterException("Route not found [{$this->getUri()}]", 404);
          }
       }
    }

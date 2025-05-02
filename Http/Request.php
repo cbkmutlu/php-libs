@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace System\Http;
 
+use System\Http\HttpException;
+
 class Request {
    private $get;
    private $post;
@@ -72,6 +74,10 @@ class Request {
 
          if ($contents) {
             $body = json_decode($contents, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+               throw new HttpException(json_last_error_msg(), 400);
+            }
          }
       }
 

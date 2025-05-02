@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace System\Language;
 
-use System\Exception\ExceptionHandler;
+use System\Exception\SystemException;
 use System\Session\Session;
 
 class Language {
@@ -61,7 +61,7 @@ class Language {
    private function checkFile(string $file, string $path, string $key, ?array $printf, ?string $locale): string {
       if (!isset($this->translations[$file])) {
          if (!file_exists($path)) {
-            throw new ExceptionHandler("Language file not found [{$path}]");
+            throw new SystemException("Language file not found [{$path}]");
          }
          $this->translations[$file] = require_once $path;
       }

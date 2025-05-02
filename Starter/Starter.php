@@ -5,25 +5,21 @@ declare(strict_types=1);
 namespace System\Starter;
 
 use System\Router\Router;
-use Whoops\Run as WhoopsRun;
-use Whoops\Handler\PrettyPageHandler as WhoopsPrettyPageHandler;
 
 class Starter {
-   private static $router = null;
+   private static Router $router;
 
-   public function __construct(Router $router) {
-      $whoops = new WhoopsRun;
-      $whoops->pushHandler(new WhoopsPrettyPageHandler);
-      $whoops->register();
+   public function __construct(
+      Router $router
+   ) {
       self::$router = $router;
    }
 
-   public function env(string $file): void {
-      import_env($file);
-   }
+   public function run(): void {
+      $config = import_config('defines.app');
+      import_env($config['env']);
 
-   public function routes(array $routes): void {
-      foreach ($routes as $route) {
+      foreach ($config['routes'] as $route) {
          import_file($route);
       }
       self::$router->run();

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace System\Cookie;
 
-use System\Exception\ExceptionHandler;
+use System\Exception\SystemException;
 
 class Cookie {
    private $encryption_key;
@@ -60,7 +60,7 @@ class Cookie {
          [$data, $hash] = $parts;
 
          if (!hash_equals(hash_hmac('sha256', $data, $this->encryption_key), $hash)) {
-            throw new ExceptionHandler("Cookie integrity check failed [{$name}]");
+            throw new SystemException("Cookie integrity check failed [{$name}]");
          }
 
          return $data;

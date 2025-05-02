@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace System\Upload;
 
-use System\Exception\ExceptionHandler;
+use System\Exception\SystemException;
 use System\Language\Language;
 
 class Upload {
@@ -36,7 +36,7 @@ class Upload {
       }
 
       if (!is_uploaded_file($this->file['tmp_name'])) {
-         throw new ExceptionHandler('File upload error');
+         throw new SystemException('File upload error');
       }
 
       if (empty($this->filename)) {
@@ -44,7 +44,7 @@ class Upload {
       }
 
       if (!move_uploaded_file($this->file['tmp_name'], $this->path . '/' . $this->filename)) {
-         throw new ExceptionHandler('File upload error');
+         throw new SystemException('File upload error');
       }
 
       return true;
@@ -223,11 +223,11 @@ class Upload {
 
    private function checkPath(): void {
       if (!check_path($this->path)) {
-         throw new ExceptionHandler("File upload directory is invalid [{$this->path}]");
+         throw new SystemException("File upload directory is invalid [{$this->path}]");
       }
 
       if (!check_permission($this->path)) {
-         throw new ExceptionHandler("File upload directory is not writable [{$this->path}]");
+         throw new SystemException("File upload directory is not writable [{$this->path}]");
       }
    }
 }

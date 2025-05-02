@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace System\Secure;
 
-use System\Exception\ExceptionHandler;
+use System\Exception\SystemException;
 
 class Hash {
    private $hash_cost;
@@ -24,7 +24,7 @@ class Hash {
       $hash = password_hash($value, $this->hash_algorithm, $options);
 
       if (!$hash) {
-         throw new ExceptionHandler('Hash not supported');
+         throw new SystemException('Hash not supported');
       }
 
       return $hash;
