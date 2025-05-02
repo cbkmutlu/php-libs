@@ -6,20 +6,25 @@ namespace System\Database;
 
 use PDO;
 use PDOException;
-use System\Exception\ExceptionHandler;
+use PDOStatement;
+use System\Database\DatabaseException;
 
 class Database {
-   private $pdo;
-   private $state;
-   private $query = null;
+   private ?PDO $pdo = null;
+   private PDOStatement $state;
+   private $query;
    private $total = 0;
-   private $positional = false;
-   private $progress = false;
-   private $prefix = null;
-
-   public function __construct() {
-      $this->connect();
-   }
+   private $progress;
+   private $prefix;
+   private $positional;
+   private $where;
+   private $select;
+   private $table;
+   private $join;
+   private $orderBy;
+   private $groupBy;
+   private $limit;
+   private $having;
 
    public function connect(?string $connection = null): self {
       $config = import_config('defines.database');
@@ -27,37 +32,47 @@ class Database {
          PDO::ATTR_PERSISTENT => $config['persistent'],
          PDO::ATTR_EMULATE_PREPARES => $config['prepares'],
          PDO::ATTR_ERRMODE => $config['error_mode'],
-         PDO::ATTR_DEFAULT_FETCH_MODE => $config['fetch_mode']
+         PDO::ATTR_DEFAULT_FETCH_MODE => $config['fetch_mode'],
+         PDO::MYSQL_ATTR_FOUND_ROWS => $config['update_rows']
       ];
       $connection = is_null($connection) ? $config['default'] : $connection;
       $config = $config['connections'][$connection];
       $this->prefix = $config['db_prefix'];
 
       if ($config['db_driver'] === 'mysql' || $config['db_driver'] === 'pgsql') {
-         $dsn = $config['db_driver'] . ':host=' . $config['db_host'] . ';dbname=' . $config['db_name'];
+         $port = $config['db_port'] !== '' ? "port={$config['db_port']};" : '';
+         $dsn = "{$config['db_driver']}:host={$config['db_host']};{$port}dbname={$config['db_name']}";
       } elseif ($config['db_driver'] === 'sqlite') {
-         $dsn = 'sqlite:' . $config['db_name'];
+         $dsn = "sqlite:{$config['db_name']}";
       } elseif ($config['db_driver'] === 'oracle') {
-         $dsn = 'oci:dbname=' . $config['db_host'] . '/' . $config['db_name'];
+         $dsn = "oci:dbname={$config['db_host']}:{$config['db_port']}/{$config['db_service_name']}";
       } elseif ($config['db_driver'] === 'mssql') {
-         $dsn = 'sqlsrv:Server=' . $config['db_host'] . ';Database=' . $config['db_name'];
+         $dsn = "sqlsrv:Server={$config['db_host']},{$config['db_port']};Database={$config['db_name']}";
       }
 
       try {
          $this->pdo = new PDO($dsn, $config['db_user'], $config['db_pass'], $attr);
-         $this->pdo->exec("SET NAMES '" . $config['db_charset'] . "' COLLATE '" . $config['db_collation'] . "'");
-         $this->pdo->exec("SET CHARACTER SET '" . $config['db_charset'] . "'");
-         $this->pdo->exec("SET CHARACTER_SET_CONNECTION='" . $config['db_charset'] . "'");
+         $this->pdo->exec("SET NAMES '{$config['db_charset']}' COLLATE '{$config['db_collation']}'");
+         $this->pdo->exec("SET CHARACTER SET '{$config['db_charset']}'");
+         $this->pdo->exec("SET CHARACTER_SET_CONNECTION='{$config['db_charset']}'");
       } catch (PDOException $e) {
-         throw new ExceptionHandler('Connect ' . $e->getMessage());
+         throw new DatabaseException('Connection ' . $e->getMessage());
       }
 
       return $this;
    }
 
+   private function pdo(): PDO {
+      if (!$this->pdo) {
+         $this->connect();
+      }
+
+      return $this->pdo;
+   }
+
    public function query(string $query, array $params = []): self {
-      $this->state = $this->pdo->prepare($query);
       try {
+         $this->state = $this->pdo()->prepare($query);
          $this->state->execute($params);
          $this->query = $query;
          $this->total++;
@@ -68,18 +83,27 @@ class Database {
             $this->rollback();
          }
 
-         throw new ExceptionHandler('Query ' . $e->getMessage());
+         throw new DatabaseException('Query ' . $e->getMessage());
       }
    }
 
    public function execute(array $params = []): self {
       try {
+         $this->query .= $this->join ? $this->join : '';
+         $this->query .= $this->where ? ' WHERE ' . $this->where : '';
+         $this->query .= $this->groupBy ? ' GROUP BY ' . $this->groupBy : '';
+         $this->query .= $this->having ? ' HAVING ' . $this->having : '';
+         $this->query .= $this->orderBy ? ' ORDER BY ' . $this->orderBy : '';
+         $this->query .= $this->limit ? ' LIMIT ' . $this->limit : '';
+         $this->reset();
+         $this->state = $this->pdo()->prepare($this->query);
+         $this->total++;
+
          if ($this->positional) {
             $this->state->execute();
          } else {
             $this->state->execute($params);
          }
-         $this->total++;
 
          return $this;
       } catch (PDOException $e) {
@@ -87,18 +111,7 @@ class Database {
             $this->rollback();
          }
 
-         throw new ExceptionHandler('Execute ' . $e->getMessage());
-      }
-   }
-
-   public function prepare(string $query): self {
-      try {
-         $this->positional = false;
-         $this->state = $this->pdo->prepare($query);
-         $this->query = $query;
-         return $this;
-      } catch (PDOException $e) {
-         throw new ExceptionHandler('Prepare ' . $e->getMessage());
+         throw new DatabaseException('Execute ' . $e->getMessage());
       }
    }
 
@@ -113,46 +126,54 @@ class Database {
          }
          return $this;
       } catch (PDOException $e) {
-         throw new ExceptionHandler('Bind ' . $e->getMessage());
+         throw new DatabaseException('Bind ' . $e->getMessage());
       }
    }
 
    public function escape(string $data): string {
       try {
-         return $this->pdo->quote($data);
+         return $this->pdo()->quote(trim($data));
       } catch (PDOException $e) {
-         throw new ExceptionHandler('Escape ' . $e->getMessage());
+         throw new DatabaseException('Escape ' . $e->getMessage());
       }
    }
 
-   public function transaction(): self {
+   public function transaction(): bool {
       try {
-         $this->pdo->beginTransaction();
-         $this->pdo->setAttribute(PDO::ATTR_AUTOCOMMIT, false);
-         $this->progress = true;
-         return $this;
+         if (!$this->progress++) {
+            $this->pdo()->setAttribute(PDO::ATTR_AUTOCOMMIT, false);
+            return $this->pdo()->beginTransaction();
+         }
+
+         $this->pdo()->exec('SAVEPOINT trans' . $this->progress);
+         return $this->progress >= 0;
       } catch (PDOException $e) {
-         throw new ExceptionHandler('Transaction ' . $e->getMessage());
+         throw new DatabaseException('Transaction ' . $e->getMessage());
       }
    }
 
-   public function commit(): self {
+   public function commit(): bool {
       try {
-         $this->pdo->commit();
-         $this->progress = false;
-         return $this;
+         if (!--$this->progress) {
+            return $this->pdo()->commit();
+         }
+
+         return $this->progress >= 0;
       } catch (PDOException $e) {
-         throw new ExceptionHandler('Commit ' . $e->getMessage());
+         throw new DatabaseException('Commit ' . $e->getMessage());
       }
    }
 
-   public function rollback(): self {
+   public function rollback(): bool {
       try {
-         $this->pdo->rollBack();
-         $this->progress = false;
-         return $this;
+         if (--$this->progress) {
+            $this->pdo()->exec('ROLLBACK TO trans' . ($this->progress + 1));
+            return true;
+         }
+
+         return $this->pdo()->rollBack();
       } catch (PDOException $e) {
-         throw new ExceptionHandler('Rollback ' . $e->getMessage());
+         throw new DatabaseException('Rollback ' . $e->getMessage());
       }
    }
 
@@ -160,45 +181,50 @@ class Database {
       return $this->prefix . $table;
    }
 
-   public function getAll(?int $fetch = null): mixed {
+   public function getAll(?string $fetch = null, mixed $args = null, bool $all = true): mixed {
       try {
-         if (is_null($fetch)) {
-            return $this->state->fetchAll();
+         if (!is_null($fetch)) {
+            $mode = 'PDO::' . $fetch;
+            if (!defined($mode)) {
+               throw new DatabaseException("Invalid fetch mode: $mode");
+            }
+
+            $constant = constant($mode);
+
+            if ($constant === PDO::FETCH_CLASS && $args) {
+               $this->state->setFetchMode($constant, $args);
+            } else {
+               $this->state->setFetchMode($constant);
+            }
          }
 
-         return $this->state->fetchAll($fetch);
+         return $all ? $this->state->fetchAll() : $this->state->fetch();
       } catch (PDOException $e) {
-         throw new ExceptionHandler('Get All ' . $e->getMessage());
+         throw new DatabaseException('Database Fetch Error: ' . $e->getMessage());
       }
    }
 
-   public function getRow(?int $fetch = null): mixed {
-      try {
-         if (is_null($fetch)) {
-            return $this->state->fetch();
-         }
-
-         return $this->state->fetch($fetch);
-      } catch (PDOException $e) {
-         throw new ExceptionHandler('Get Row ' . $e->getMessage());
-      }
+   public function getRow(?int $fetch = null, mixed $args = null): mixed {
+      return $this->getAll($fetch, $args, false);
    }
 
    public function getLastId(): string {
       try {
-         return $this->pdo->lastInsertId();
+         return $this->pdo()->lastInsertId();
       } catch (PDOException $e) {
-         throw new ExceptionHandler('Get Last Id ' . $e->getMessage());
+         throw new DatabaseException('Get Last Id ' . $e->getMessage());
       }
    }
 
    public function getLastRow(string $table): mixed {
-      try {
-         $result = $this->query("SELECT MAX(id) FROM " . $this->prefix($table));
-         return $result->getRow();
-      } catch (PDOException $e) {
-         throw new ExceptionHandler('Get Last Row ' . $e->getMessage());
+      $result = $this->query("SELECT * FROM " . $this->prefix($table) . " WHERE id=" . $this->getLastId());
+      $result = $result->getRow();
+
+      if (empty($result)) {
+         throw new DatabaseException('Get Last Row Error');
       }
+
+      return $result;
    }
 
    public function getLastQuery(): string {
@@ -213,14 +239,153 @@ class Database {
       try {
          return $this->state->rowCount();
       } catch (PDOException $e) {
-         throw new ExceptionHandler('Get Affected Rows ' . $e->getMessage());
+         throw new DatabaseException('Get Affected Rows ' . $e->getMessage());
       }
    }
 
    public function __destruct() {
-      if ($this->state) {
+      if (isset($this->state)) {
          $this->state->closeCursor();
       }
-      $this->pdo = null;
+      if ($this->pdo instanceof PDO) {
+         $this->pdo = null;
+      }
+   }
+
+   public function table(string $table): self {
+      $this->pdo();
+      $this->table = $this->prefix . $table;
+
+      return $this;
+   }
+
+   public function where(string|array $data): self {
+      if (is_array($data)) {
+         foreach ($data as $column => $val) {
+            if (is_int($column)) {
+               $values[] = "$val = :$val";
+            } else {
+               $values[] = "$column = $val";
+            }
+         }
+
+         $condition = implode(', ', $values);
+      } else {
+         $condition = $data;
+      }
+
+      if ($this->where) {
+         $this->where = $this->where . ' ' . rtrim($condition);
+      } else {
+         $this->where = rtrim($condition);
+      }
+
+      return $this;
+   }
+
+   public function join(string $table, string $condition, string $type = 'LEFT'): self {
+      $this->join = $this->join . ' ' . $type . ' JOIN ' . $this->prefix . $table . ' ON ' . rtrim($condition);
+
+      return $this;
+   }
+
+   public function orderBy(string $orderBy): self {
+      if (stristr($orderBy, ' ') || strtolower($orderBy) === 'rand()') {
+         $this->orderBy = $orderBy;
+      } else {
+         $this->orderBy = $orderBy . ' ASC';
+      }
+
+      return $this;
+   }
+
+   public function groupBy(string $groupBy): self {
+      $this->groupBy = $groupBy;
+
+      return $this;
+   }
+
+   public function limit(int $limit): self {
+      $this->limit = $limit;
+
+      return $this;
+   }
+
+   public function having(string $having): self {
+      $this->having = $having;
+
+      return $this;
+   }
+
+   public function select(string $fields = '*'): self {
+      if ($this->select) {
+         $this->select = $this->select . ', ' . rtrim($fields);
+      } else {
+         $this->select = rtrim($fields);
+      }
+
+      $query = "SELECT {$this->select} FROM {$this->table}";
+      $this->query = $query;
+
+      return $this;
+   }
+
+
+   public function update(array $data): self {
+      $query = "UPDATE {$this->table} SET ";
+      $values = [];
+
+      foreach ($data as $column => $val) {
+         if (is_int($column)) {
+            $values[] = "$val = :$val";
+         } else {
+            $values[] = "$column = $val";
+         }
+      }
+
+      $query .= implode(', ', $values);
+      $this->query = $query;
+
+      return $this;
+   }
+
+   public function delete(): self {
+      $query = "DELETE FROM {$this->table}";
+      $this->query = $query;
+
+      return $this;
+   }
+
+   public function insert(array $data): self {
+      $query = "INSERT INTO {$this->table} ";
+      $columns = [];
+      $values = [];
+
+      foreach ($data as $column => $val) {
+         if (is_int($column)) {
+            $columns[] = "$val";
+            $values[] = ":$val";
+         } else {
+            $columns[] = "$column";
+            $values[] = "$val";
+         }
+      }
+
+      $query .= '(' . implode(', ', $columns) . ') VALUES (' . implode(', ', $values) . ')';
+      $this->query = $query;
+
+      return $this;
+   }
+
+   private function reset(): void {
+      $this->positional = null;
+      $this->where = null;
+      $this->select = null;
+      $this->table = null;
+      $this->join = null;
+      $this->orderBy = null;
+      $this->groupBy = null;
+      $this->limit = null;
+      $this->having = null;
    }
 }
