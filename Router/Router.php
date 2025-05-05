@@ -55,9 +55,7 @@ class Router {
    }
 
    public function middleware(array $middlewares): self {
-      foreach ($middlewares as $middleware) {
-         $this->middlewares[$middleware] = ['callback' => 'App\\Middlewares\\' . ucfirst($middleware) . '@handle'];
-      }
+      $this->middlewares = array_merge($this->middlewares, $middlewares);
       return $this;
    }
 
@@ -86,37 +84,37 @@ class Router {
       return $this;
    }
 
-   public function get(string $pattern, string|callable $callback): self {
+   public function get(string $pattern, callable|array $callback): self {
       $this->add('GET', $pattern, $callback);
       return $this;
    }
 
-   public function post(string $pattern, string|callable $callback): self {
+   public function post(string $pattern, callable|array $callback): self {
       $this->add('POST', $pattern, $callback);
       return $this;
    }
 
-   public function patch(string $pattern, string|callable $callback): self {
+   public function patch(string $pattern, callable|array $callback): self {
       $this->add('PATCH', $pattern, $callback);
       return $this;
    }
 
-   public function delete(string $pattern, string|callable $callback): self {
+   public function delete(string $pattern, callable|array $callback): self {
       $this->add('DELETE', $pattern, $callback);
       return $this;
    }
 
-   public function put(string $pattern, string|callable $callback): self {
+   public function put(string $pattern, callable|array $callback): self {
       $this->add('PUT', $pattern, $callback);
       return $this;
    }
 
-   public function options(string $pattern, string|callable $callback): self {
+   public function options(string $pattern, callable|array $callback): self {
       $this->add('OPTIONS', $pattern, $callback);
       return $this;
    }
 
-   public function match(array $methods, string $pattern, string|callable $callback) {
+   public function match(array $methods, string $pattern, callable|array $callback) {
       foreach ($methods as $method) {
          $this->add(strtoupper($method), $pattern, $callback);
       }
@@ -162,13 +160,10 @@ class Router {
                }
 
                if (isset($route['middlewares'])) {
-
                   foreach ($route['middlewares'] as $middleware) {
-                     [$controller, $method] = explode('@', $middleware['callback']);
-
-                     if (class_exists($controller)) {
-                        $container = $this->container->resolve($controller);
-                        call_user_func_array([$container, $method], []);
+                     if (class_exists($middleware)) {
+                        $container = $this->container->resolve($middleware);
+                        call_user_func_array([$container, 'handle'], []);
                      }
                   }
                }
@@ -176,9 +171,12 @@ class Router {
                array_shift($params);
                if (is_callable($route['callback'])) {
                   call_user_func_array($route['callback'], array_values($params));
-               } else if (strpos($route['callback'], '@') !== false) {
-                  [$controller, $method] = explode('@', $route['callback']);
+               } else if (is_array($route['callback'])) {
+                  if (!isset($route['callback'][0], $route['callback'][1])) {
+                     throw new RouterException("Invalid route callback");
+                  }
 
+                  [$controller, $method] = $route['callback'];
                   if (!class_exists($controller)) {
                      throw new RouterException("Controller not found [{$controller}::{$method}]");
                   }
@@ -229,7 +227,7 @@ class Router {
       };
    }
 
-   private function add(string $method, string $pattern, string|callable $callback): void {
+   private function add(string $method, string $pattern, callable|array $callback): void {
       if ($pattern === '/') {
          $pattern = $this->prefix . trim($pattern, '/');
       } else {
@@ -244,19 +242,11 @@ class Router {
       $pattern = preg_replace('/[\[{\(].*[\]}\)]/U', '([^/]+)', $pattern);
       $pattern = '/^' . str_replace('/', '\/', $pattern) . '$/';
 
-      if (is_callable($callback)) {
-         $closure = $callback;
-      } elseif (strpos($callback, '@') !== false) {
-         if ($this->module) {
-            $closure = 'App\\Modules\\' . ucfirst($this->module) . '\\Controllers\\' . $callback;
-         }
-      }
-
       $this->routes[] = array_filter([
          'uri'         => $uri,
          'method'      => $method,
          'pattern'     => $pattern,
-         'callback'    => $closure,
+         'callback'    => $callback,
          'module'      => $this->module ? ucfirst($this->module) : null,
          'middlewares' => $this->middlewares ?: [],
          'domain'      => $this->domain ?: [],
