@@ -49,18 +49,20 @@ class Cli {
                   return $this->createService($params[1]);
                case 'repository':
                   return $this->createRepository($params[1]);
+               case 'module':
+                  return $this->createModule($params[1]);
                case 'model':
                   return $this->createModel($params[1]);
                case 'middleware':
                   return $this->createMiddleware($params[1]);
                case 'listener':
                   return $this->createListener($params[1]);
-               case 'hash':
-                  return $this->createHash($params[1]);
                case 'migration':
                   return $this->createMigration($params[1]);
                case 'migrate':
                   return $this->migrate($params[1]);
+               case 'hash':
+                  return $this->createHash($params[1]);
                default:
                   return $this->help();
             }
@@ -74,9 +76,10 @@ class Cli {
    }
 
    private function help(): string {
-      return $this->info('[controller]', 'light_blue') . "\t" . 'controller User/Register' . "\n" .
-         $this->info('[service]', 'light_blue') . "\t" . 'service User/Register' . "\n" .
-         $this->info('[repository]', 'light_blue') . "\t" . 'repository User/Register' . "\n" .
+      return $this->info('[controller]', 'light_blue') . "\t" . 'controller User/RegisterController' . "\n" .
+         $this->info('[service]', 'light_blue') . "\t" . 'service User/RegisterService' . "\n" .
+         $this->info('[repository]', 'light_blue') . "\t" . 'repository User/RegisterRepository' . "\n" .
+         $this->info('[module]', 'light_blue') . "\t" . 'module User/Register' . "\n\n" .
          $this->info('[model]', 'light_blue') . "\t\t" . 'model User/Register' . "\n" .
          $this->info('[middleware]', 'light_blue') . "\t" . 'middleware MyMiddleware' . "\n" .
          $this->info('[listener]', 'light_blue') . "\t" . 'listener MyListener' . "\n" .
@@ -167,6 +170,15 @@ class Cli {
       return $this->success('Repository successfully created: ' . $location);
    }
 
+   private function createModule(string $module): string {
+      $this->createController($module . 'Controller');
+      $this->createService($module . 'Service');
+      $this->createRepository($module . 'Repository');
+
+      return $this->success('Module successfully created: ' . $module);
+   }
+
+
    private function createModel(string $model): string {
       if (!strpos($model, '/')) {
          return $this->error('Invalid command: ' . $model);
@@ -189,7 +201,7 @@ class Cli {
    }
 
    private function createMiddleware(string $middleware): string {
-      $file = "App/Middlewares/$middleware.php";
+      $file = "App/Core/Middlewares/$middleware.php";
 
       $template = file_get_contents('System/Cli/middleware.temp');
       $content = str_replace('{middleware}', $middleware, $template);
@@ -203,7 +215,7 @@ class Cli {
    }
 
    private function createListener(string $listener): string {
-      $file = "App/Listeners/$listener.php";
+      $file = "App/Core/Listeners/$listener.php";
 
       $template = file_get_contents('System/Cli/listener.temp');
       $content = str_replace('{listener}', $listener, $template);
@@ -217,7 +229,7 @@ class Cli {
    }
 
    private function createMigration(string $migration): string {
-      $location = "App/Migrations";
+      $location = "App/Core/Migrations";
       $class = str_replace('_', ' ', $migration);
       $class = str_replace(' ', '', strtolower($class));
       $name =  date('Y_m_d_His') . '_' . $class;
@@ -241,12 +253,12 @@ class Cli {
    }
 
    public function migrate($param): string {
-      $json = "App/Migrations/migration.json";
+      $json = "App/Core/Migrations/migration.json";
       if (!file_exists($json)) {
          file_put_contents($json, json_encode([], JSON_PRETTY_PRINT));
       }
 
-      $location = "App/Migrations";
+      $location = "App/Core/Migrations";
       $migrations = json_decode(file_get_contents($json), true);
       $maxValue = (count($migrations) > 0) ? max($migrations) : 0;
       $maxKeys = array_filter($migrations, fn($value) => $value === $maxValue);
