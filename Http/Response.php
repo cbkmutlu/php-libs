@@ -6,6 +6,7 @@ namespace System\Http;
 
 class Response {
    public $codes;
+   public $body;
 
    public function __construct() {
       $this->codes = import_config('defines.status');
@@ -39,7 +40,7 @@ class Response {
          }
       }
 
-      header('Content-type: application/json');
+      header('Content-type: application/json; charset=UTF-8');
 
       $response = [
          'status' => $code < 300,
@@ -50,5 +51,14 @@ class Response {
       ];
 
       print(json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+   }
+
+   public function body(?string $body, ?int $code = null): void {
+      header_remove();
+      $this->status($code);
+
+      header('Content-type: text/html; charset=UTF-8');
+      $this->body = $body;
+      print($this->body);
    }
 }
