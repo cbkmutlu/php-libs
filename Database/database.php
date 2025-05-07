@@ -252,76 +252,74 @@ class Database {
       }
    }
 
-   public function table(string $table): self {
+   public function table(string $data): self {
       $this->pdo();
-      $this->table = $this->prefix . $table;
+      $this->table = $this->prefix . $data;
 
       return $this;
    }
 
-   public function where(string|array $data): self {
-      if (is_array($data)) {
-         foreach ($data as $column => $val) {
-            if (is_int($column)) {
-               $values[] = "$val = :$val";
-            } else {
-               $values[] = "$column = $val";
-            }
-         }
-
-         $condition = implode(', ', $values);
-      } else {
-         $condition = $data;
-      }
+   public function where(array $data): self {
+      $data = implode(', ', $data);
 
       if ($this->where) {
-         $this->where = $this->where . ' ' . rtrim($condition);
+         $this->where = $this->where . ' ' . rtrim($data);
       } else {
-         $this->where = rtrim($condition);
+         $this->where = rtrim($data);
       }
 
       return $this;
    }
 
-   public function join(string $table, string $condition, string $type = 'LEFT'): self {
-      $this->join = $this->join . ' ' . $type . ' JOIN ' . $this->prefix . $table . ' ON ' . rtrim($condition);
+   public function join(array $data, string $type = 'LEFT'): self {
+      foreach ($data as $left => $right) {
+         [$leftTable, $leftField] = explode('.', $left, 2);
+         [$rightTable, $rightField] = explode('.', $right, 2);
 
-      return $this;
-   }
+         $leftTable = $this->prefix . trim($leftTable);
+         $rightTable = $this->prefix . trim($rightTable);
 
-   public function orderBy(string $orderBy): self {
-      if (stristr($orderBy, ' ') || strtolower($orderBy) === 'rand()') {
-         $this->orderBy = $orderBy;
-      } else {
-         $this->orderBy = $orderBy . ' ASC';
+         $this->join .= " {$type} JOIN {$leftTable} ON {$leftTable}.{$leftField} = {$rightTable}.{$rightField}";
       }
 
       return $this;
    }
 
-   public function groupBy(string $groupBy): self {
-      $this->groupBy = $groupBy;
+   public function orderBy(string $data): self {
+      if (stristr($data, ' ') || strtolower($data) === 'rand()') {
+         $this->orderBy = $data;
+      } else {
+         $this->orderBy = $data . ' ASC';
+      }
 
       return $this;
    }
 
-   public function limit(int $limit): self {
-      $this->limit = $limit;
+   public function groupBy(string $data): self {
+      $this->groupBy = $data;
 
       return $this;
    }
 
-   public function having(string $having): self {
-      $this->having = $having;
+   public function limit(int $data): self {
+      $this->limit = $data;
 
       return $this;
    }
 
-   public function select(string $fields = '*'): self {
+   public function having(string $data): self {
+      $this->having = $data;
+
+      return $this;
+   }
+
+   public function select(array $data = ['*']): self {
+      $data = rtrim(implode(', ', $data));
+
       if ($this->select) {
-         $this->select = $this->select . ', ' . rtrim($fields);
+         $this->select = $this->select . ', ' . $data;
       } else {
-         $this->select = rtrim($fields);
+         $this->select = $data;
       }
 
       $query = "SELECT {$this->select} FROM {$this->table}";
