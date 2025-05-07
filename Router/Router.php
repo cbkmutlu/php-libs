@@ -150,44 +150,40 @@ class Router {
          if (preg_match($route['pattern'], $this->getUri(), $params)) {
             if ($this->checkIp($route) && $this->checkDomain($route) && $this->checkSSL($route) && $this->checkMethod($route)) {
                $matched = true;
-
-               $middlewares = import_config('services.middlewares.default');
-               foreach ($middlewares as $middleware) {
-                  if (class_exists($middleware)) {
-                     $container = $this->container->resolve($middleware);
-                     call_user_func_array([$container, 'handle'], []);
-                  }
-               }
-
-               if (isset($route['middlewares'])) {
-                  foreach ($route['middlewares'] as $middleware) {
-                     if (class_exists($middleware)) {
-                        $container = $this->container->resolve($middleware);
-                        call_user_func_array([$container, 'handle'], []);
-                     }
-                  }
-               }
-
                array_shift($params);
-               if (is_callable($route['callback'])) {
-                  call_user_func_array($route['callback'], array_values($params));
-               } else if (is_array($route['callback'])) {
-                  if (!isset($route['callback'][0], $route['callback'][1])) {
+
+               $callback = function () use ($route, $params) {
+                  if (is_callable($route['callback'])) {
+                     call_user_func_array($route['callback'], array_values($params));
+                  } elseif (is_array($route['callback'])) {
+                     [$controller, $method] = $route['callback'];
+                     if (!class_exists($controller)) {
+                        throw new RouterException("Controller not found [{$controller}::{$method}]");
+                     }
+                     if (!method_exists($controller, $method)) {
+                        throw new RouterException("Method not found [{$controller}::{$method}]");
+                     }
+                     $instance = $this->container->resolve($controller);
+                     call_user_func_array([$instance, $method], array_values($params));
+                  } else {
                      throw new RouterException("Invalid route callback");
                   }
+               };
 
-                  [$controller, $method] = $route['callback'];
-                  if (!class_exists($controller)) {
-                     throw new RouterException("Controller not found [{$controller}::{$method}]");
-                  }
-                  if (!method_exists($controller, $method)) {
-                     throw new RouterException("Method not found [{$controller}::{$method}]");
-                  }
+               $middlewares = array_merge(import_config('services.middlewares.default') ?? [], $route['middlewares'] ?? []);
+               $next = $callback;
 
-                  $container = $this->container->resolve($controller);
-                  call_user_func_array([$container, $method], array_values($params));
+               foreach (array_reverse($middlewares) as $middleware) {
+                  if (class_exists($middleware)) {
+                     $instance = $this->container->resolve($middleware);
+                     $current = $next;
+                     $next = function () use ($instance, $current) {
+                        return $instance->handle($current);
+                     };
+                  }
                }
 
+               $next();
                break;
             }
          }
@@ -202,6 +198,7 @@ class Router {
          }
       }
    }
+
 
    public function url(string $name, array $params = []): mixed {
       if (isset($this->names[$name])) {
