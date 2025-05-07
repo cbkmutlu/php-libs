@@ -7,6 +7,8 @@ namespace App\Modules\{module}\Repositories;
 use System\Database\Database;
 
 class {class} {
+   protected $table = '';
+
    public function __construct(
       private Database $database
    ) {
