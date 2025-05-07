@@ -260,7 +260,7 @@ class Database {
    }
 
    public function where(array $data): self {
-      $data = implode(', ', $data);
+      $data = implode(' ', $data);
 
       if ($this->where) {
          $this->where = $this->where . ' ' . rtrim($data);
