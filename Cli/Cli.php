@@ -229,9 +229,10 @@ class Cli {
    }
 
    private function createMigration(string $migration): string {
+      $prefix = import_config('defines.app');
       $location = "App/Core/Migrations";
       $class = str_replace(' ', '', strtolower($migration));
-      $name =  date('Y_m_d_His') . '_' . $class;
+      $name =  $prefix['migration'] . $class;
       $file = $location . '/' . $name . '.php';
 
       $template = file_get_contents('System/Cli/migration.temp');
@@ -252,6 +253,7 @@ class Cli {
    }
 
    public function migrate($param): string {
+      $prefix = import_config('defines.app');
       $json = "App/Core/Migrations/migration.json";
       if (!file_exists($json)) {
          file_put_contents($json, json_encode([], JSON_PRETTY_PRINT));
@@ -266,7 +268,7 @@ class Cli {
       foreach (scandir($location) as $file) {
          if (is_file($location . '/' . $file) && str_ends_with($file, '.php')) {
             require_once $location . '/' . $file;
-            $class = substr($file, 18, -4);
+            $class = substr($file, strlen($prefix['migration']), -4);
 
             if (class_exists($class)) {
                $instance = new $class();
