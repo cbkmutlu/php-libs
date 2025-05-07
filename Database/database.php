@@ -25,6 +25,7 @@ class Database {
    private $groupBy;
    private $limit;
    private $having;
+   private $debug;
 
    public function connect(?string $connection = null): self {
       $config = import_config('defines.database');
@@ -70,6 +71,12 @@ class Database {
       return $this->pdo;
    }
 
+   public function debug(): self {
+      $this->debug = true;
+
+      return $this;
+   }
+
    public function query(string $query, array $params = []): self {
       try {
          $this->state = $this->pdo()->prepare($query);
@@ -95,6 +102,11 @@ class Database {
          $this->query .= $this->having ? ' HAVING ' . $this->having : '';
          $this->query .= $this->orderBy ? ' ORDER BY ' . $this->orderBy : '';
          $this->query .= $this->limit ? ' LIMIT ' . $this->limit : '';
+         if ($this->debug) {
+            var_dump($this->query, $params);
+            $this->debug = false;
+            exit();
+         }
          $this->reset();
          $this->state = $this->pdo()->prepare($this->query);
          $this->total++;
@@ -132,7 +144,7 @@ class Database {
 
    public function escape(string $data): string {
       try {
-         return $this->pdo()->quote(trim($data));
+         return $this->pdo()->quote($data);
       } catch (PDOException $e) {
          throw new DatabaseException('Escape ' . $e->getMessage());
       }
@@ -337,7 +349,7 @@ class Database {
          if (is_int($column)) {
             $values[] = "$val = :$val";
          } else {
-            $values[] = "$column = $val";
+            $values[] = "$column = ". $this->escape((string) $val);
          }
       }
 
@@ -365,7 +377,7 @@ class Database {
             $values[] = ":$val";
          } else {
             $columns[] = "$column";
-            $values[] = "$val";
+            $values[] = $this->escape((string) $val);
          }
       }
 
