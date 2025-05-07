@@ -230,8 +230,7 @@ class Cli {
 
    private function createMigration(string $migration): string {
       $location = "App/Core/Migrations";
-      $class = str_replace('_', ' ', $migration);
-      $class = str_replace(' ', '', strtolower($class));
+      $class = str_replace(' ', '', strtolower($migration));
       $name =  date('Y_m_d_His') . '_' . $class;
       $file = $location . '/' . $name . '.php';
 
