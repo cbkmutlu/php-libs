@@ -44,13 +44,11 @@ class Cli {
          if (isset($params[1])) {
             switch ($params[0]) {
                case 'controller':
-                  return $this->createController($params[1]);
+                  return $this->createController($params[1], $params[2]);
                case 'service':
                   return $this->createService($params[1]);
                case 'repository':
                   return $this->createRepository($params[1]);
-               case 'module':
-                  return $this->createModule($params[1]);
                case 'model':
                   return $this->createModel($params[1]);
                case 'middleware':
@@ -79,13 +77,12 @@ class Cli {
       return $this->info('[controller]', 'light_blue') . "\t" . 'controller User/RegisterController' . "\n" .
          $this->info('[service]', 'light_blue') . "\t" . 'service User/RegisterService' . "\n" .
          $this->info('[repository]', 'light_blue') . "\t" . 'repository User/RegisterRepository' . "\n" .
-         $this->info('[module]', 'light_blue') . "\t" . 'module User/Register' . "\n\n" .
          $this->info('[model]', 'light_blue') . "\t\t" . 'model User/Register' . "\n" .
+         $this->info('[migration]', 'light_blue') . "\t" . 'migration User/Migration' . "\n" .
          $this->info('[middleware]', 'light_blue') . "\t" . 'middleware MyMiddleware' . "\n" .
-         $this->info('[listener]', 'light_blue') . "\t" . 'listener MyListener' . "\n" .
+         $this->info('[listener]', 'light_blue') . "\t" . 'listener MyListener' . "\n\n" .
          $this->info('[hash]', 'light_blue') . "\t\t" . 'hash Password' . "\n" .
          $this->info('[key]', 'light_blue') . "\t\t" . 'key' . "\n" .
-         $this->info('[migration]', 'light_blue') . "\t" . 'migration MyMigration' . "\n\n" .
          $this->info('[migrate --run]', 'light_blue') . "\t\t" . '? run created migrations' . "\n" .
          $this->info('[migrate --rollback]', 'light_blue') . "\t" . '? rollback last migration' . "\n" .
          $this->info('[migrate --reset]', 'light_blue') . "\t" . '? reset all migrations' . "\n" .
@@ -107,97 +104,138 @@ class Cli {
       return $this->success('256bit key: ' . $data);
    }
 
-   private function createController(string $controller): string {
-      if (!strpos($controller, '/')) {
-         return $this->error('Invalid command: ' . $controller);
+   private function createController(string $data, ?string $swagger = null): string {
+      if (preg_match('#^[A-Za-z0-9_]+/[A-Za-z0-9_]+$#', $data)) {
+         [$module, $class] = explode('/', $data);
+         $location = "App/Modules/$module/Controllers";
+         $namespace = "App\\Modules\\$module\\Controllers";
+      } elseif (is_string($data)) {
+         $class = $data;
+         $location = "App/Controllers";
+         $namespace = "App\\Controllers";
+      } else {
+         return $this->error('Invalid command: ' . $data);
       }
 
-      [$module, $class] = explode('/', $controller);
-      $location = "App/Modules/$module/Controllers";
       $file = "$location/$class.php";
-
-      $template = file_get_contents('System/Cli/controller.temp');
-      $content = str_replace(['{module}', '{class}'], [$module, $class], $template);
-
       if (file_exists($file)) {
          return $this->error('Controller already exists: ' . $file);
       }
 
+      if ($swagger === '--swagger') {
+         $template = file_get_contents('System/Cli/swagger.temp');
+      } else {
+         $template = file_get_contents('System/Cli/controller.temp');
+      }
+
+      $content = str_replace(['{namespace}', '{class}'], [$namespace, $class], $template);
       $this->dir($location);
       file_put_contents($file, $content);
       return $this->success('Controller successfully created: ' . $location);
    }
 
-   private function createService(string $service): string {
-      if (!strpos($service, '/')) {
-         return $this->error('Invalid command: ' . $service);
+   private function createService(string $data): string {
+      if (preg_match('#^[A-Za-z0-9_]+/[A-Za-z0-9_]+$#', $data)) {
+         [$module, $class] = explode('/', $data);
+         $location = "App/Modules/$module/Services";
+         $namespace = "App\\Modules\\$module\\Services";
+      } elseif (is_string($data)) {
+         $class = $data;
+         $location = "App/Services";
+         $namespace = "App\\Services";
+      } else {
+         return $this->error('Invalid command: ' . $data);
       }
 
-      [$module, $class] = explode('/', $service);
-      $location = "App/Modules/$module/Services";
       $file = "$location/$class.php";
-
-      $template = file_get_contents('System/Cli/service.temp');
-      $content = str_replace(['{module}', '{class}'], [$module, $class], $template);
-
       if (file_exists($file)) {
          return $this->error('Service already exists: ' . $file);
       }
 
+      $template = file_get_contents('System/Cli/service.temp');
+      $content = str_replace(['{namespace}', '{class}'], [$namespace, $class], $template);
       $this->dir($location);
       file_put_contents($file, $content);
       return $this->success('Service successfully created: ' . $location);
    }
 
-   private function createRepository(string $repository): string {
-      if (!strpos($repository, '/')) {
-         return $this->error('Invalid command: ' . $repository);
+   private function createRepository(string $data): string {
+      if (preg_match('#^[A-Za-z0-9_]+/[A-Za-z0-9_]+$#', $data)) {
+         [$module, $class] = explode('/', $data);
+         $location = "App/Modules/$module/Repositories";
+         $namespace = "App\\Modules\\$module\\Repositories";
+      } elseif (is_string($data)) {
+         $class = $data;
+         $location = "App/Repositories";
+         $namespace = "App\\Repositories";
+      } else {
+         return $this->error('Invalid command: ' . $data);
       }
 
-      [$module, $class] = explode('/', $repository);
-      $location = "App/Modules/$module/Repositories";
       $file = "$location/$class.php";
-
-      $template = file_get_contents('System/Cli/repository.temp');
-      $content = str_replace(['{module}', '{class}'], [$module, $class], $template);
-
       if (file_exists($file)) {
          return $this->error('Repository already exists: ' . $file);
       }
 
+      $template = file_get_contents('System/Cli/repository.temp');
+      $content = str_replace(['{namespace}', '{class}'], [$namespace, $class], $template);
       $this->dir($location);
       file_put_contents($file, $content);
       return $this->success('Repository successfully created: ' . $location);
    }
 
-   private function createModule(string $module): string {
-      $this->createController($module . 'Controller');
-      $this->createService($module . 'Service');
-      $this->createRepository($module . 'Repository');
-
-      return $this->success('Module successfully created: ' . $module);
-   }
-
-
-   private function createModel(string $model): string {
-      if (!strpos($model, '/')) {
-         return $this->error('Invalid command: ' . $model);
+   private function createModel(string $data): string {
+      if (preg_match('#^[A-Za-z0-9_]+/[A-Za-z0-9_]+$#', $data)) {
+         [$module, $class] = explode('/', $data);
+         $location = "App/Modules/$module/Models";
+         $namespace = "App\\Modules\\$module\\Models";
+      } elseif (is_string($data)) {
+         $class = $data;
+         $location = "App/Models";
+         $namespace = "App\\Models";
+      } else {
+         return $this->error('Invalid command: ' . $data);
       }
 
-      [$module, $class] = explode('/', $model);
-      $location = "App/Modules/$module/Models";
       $file = "$location/$class.php";
-
-      $template = file_get_contents('System/Cli/model.temp');
-      $content = str_replace(['{module}', '{class}'], [$module, $class], $template);
-
       if (file_exists($file)) {
          return $this->error('Model already exists: ' . $file);
       }
 
+      $template = file_get_contents('System/Cli/model.temp');
+      $content = str_replace(['{namespace}', '{class}'], [$namespace, $class], $template);
       $this->dir($location);
       file_put_contents($file, $content);
       return $this->success('Model successfully created: ' . $location);
+   }
+
+   private function createMigration(string $data): string {
+      if (preg_match('#^[A-Za-z0-9_]+/[A-Za-z0-9_]+$#', $data)) {
+         [$module, $class] = explode('/', $data);
+         $location = "App/Modules/$module/Migrations";
+         $search = "App/Modules/*/Migrations";
+      } elseif (is_string($data)) {
+         $class = $data;
+         $location = "App/Migrations";
+         $search = "App/Migrations";
+      } else {
+         return $this->error('Invalid command: ' . $data);
+      }
+
+      foreach (glob(ROOT_DIR . '/' .  $search . '/*.php') as $migration) {
+         require_once $migration;
+      }
+
+      if (class_exists($class)) {
+         return $this->info('Migration already exists: ' . $class);
+      }
+
+      $file = "$location/$class.php";
+      $template = file_get_contents('System/Cli/migration.temp');
+      $content = str_replace('{class}', $class, $template);
+      $this->dir($location);
+      file_put_contents($file, $content);
+      return $this->success('Migration successfully created: ' . $location);
    }
 
    private function createMiddleware(string $middleware): string {
@@ -228,75 +266,49 @@ class Cli {
       return $this->success('Listener successfully created: ' . $file);
    }
 
-   private function createMigration(string $migration): string {
-      $prefix = import_config('defines.app');
-      $location = "App/Core/Migrations";
-      $class = str_replace(' ', '', strtolower($migration));
-      $name =  $prefix['migration'] . $class;
-      $file = $location . '/' . $name . '.php';
-
-      $template = file_get_contents('System/Cli/migration.temp');
-      $content = str_replace('{class}', $class, $template);
-
-      foreach (scandir($location) as $migration) {
-         if (is_file($location . '/' . $migration) && str_ends_with($migration, '.php')) {
-            require_once $location . '/' . $migration;
-         }
-      }
-
-      if (class_exists($class)) {
-         return $this->info('Migration already exists: ' . $class);
-      }
-
-      file_put_contents($file, $content);
-      return $this->success('Migration successfully created: ' . $file);
-   }
-
    public function migrate($param): string {
-      $prefix = import_config('defines.app');
-      $json = "App/Core/Migrations/migration.json";
+      $json = "App/Config/migration.json";
       if (!file_exists($json)) {
          file_put_contents($json, json_encode([], JSON_PRETTY_PRINT));
       }
 
-      $location = "App/Core/Migrations";
+      $config = import_config('defines.app');
+      $location = $config['migrations'];
       $migrations = json_decode(file_get_contents($json), true);
       $maxValue = (count($migrations) > 0) ? max($migrations) : 0;
       $maxKeys = array_filter($migrations, fn($value) => $value === $maxValue);
       $migrate = false;
 
-      foreach (scandir($location) as $file) {
-         if (is_file($location . '/' . $file) && str_ends_with($file, '.php')) {
-            require_once $location . '/' . $file;
-            $class = substr($file, strlen($prefix['migration']), -4);
+      foreach (glob(ROOT_DIR . '/' .  $location . '/*.php') as $migration) {
+         require_once $migration;
+         $class = substr(basename($migration), 0, -4);
 
-            if (class_exists($class)) {
-               $instance = new $class();
+         if (class_exists($class)) {
+            $instance = new $class();
 
-               if ($param === '--run') {
-                  if (!isset($migrations[$class])) {
-                     $instance->up();
-                     $migrations[$class] = $maxValue + 1;
-                     $migrate = true;
-                  }
-               } else if ($param === '--rollback') {
-                  if (isset($maxKeys[$class])) {
-                     $instance->down();
-                     unset($migrations[$class]);
-                     $migrate = true;
-                  }
-               } else if ($param === '--reset') {
-                  if (isset($migrations[$class])) {
-                     $instance->down();
-                     unset($migrations[$class]);
-                     $migrate = true;
-                  }
-               } else if ($param === '--refresh') {
-                  $this->migrate('--reset');
-                  return $this->migrate('--run');
-               } else {
-                  return $this->error('Invalid command: ' . $param);
+            if ($param === '--run') {
+               if (!isset($migrations[$class])) {
+                  $instance->up();
+                  $migrations[$class] = $maxValue + 1;
+                  $migrate = true;
                }
+            } else if ($param === '--rollback') {
+               if (isset($maxKeys[$class])) {
+                  $instance->down();
+                  unset($migrations[$class]);
+                  $migrate = true;
+               }
+            } else if ($param === '--reset') {
+               if (isset($migrations[$class])) {
+                  $instance->down();
+                  unset($migrations[$class]);
+                  $migrate = true;
+               }
+            } else if ($param === '--refresh') {
+               $this->migrate('--reset');
+               return $this->migrate('--run');
+            } else {
+               return $this->error('Invalid command: ' . $param);
             }
          }
       }

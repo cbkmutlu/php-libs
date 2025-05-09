@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\{module}\Services;
+namespace {namespace};
 
 class {class} {
    public function __construct(

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\{module}\Repositories;
+namespace {namespace};
 
 use System\Database\Database;
 
