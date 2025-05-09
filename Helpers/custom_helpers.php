@@ -204,7 +204,7 @@ if (!function_exists('import_asset')) {
 
 if (!function_exists('import_file')) {
    function import_file(string $file, bool $once = false): int {
-      if (!file_exists($file = APP_DIR . $file . '.php')) {
+      if (!file_exists($file)) {
          throw new SystemException("File not found [{$file}]");
       }
 
