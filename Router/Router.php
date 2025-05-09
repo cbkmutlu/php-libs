@@ -10,7 +10,6 @@ use System\Router\RouterException;
 class Router {
    private $routes = [];
    private $prefix = '/';
-   private $module = null;
    private $middlewares = [];
    private $domain = [];
    private $ip = [];
@@ -31,7 +30,6 @@ class Router {
       $this->groups[] = [
          'prefix' => $this->prefix,
          'middlewares' => $this->middlewares,
-         'module' => $this->module,
          'domain' => $this->domain,
          'ip' => $this->ip,
          'ssl' => $this->ssl,
@@ -39,14 +37,24 @@ class Router {
       ];
 
       call_user_func($callback);
+      if ($this->length > 0) {
+         $this->prefix = $this->groups[$this->length - 1]['prefix'];
+         $this->middlewares = $this->groups[$this->length - 1]['middlewares'];
+         $this->domain = $this->groups[$this->length - 1]['domain'];
+         $this->ip = $this->groups[$this->length - 1]['ip'];
+         $this->ssl = $this->groups[$this->length - 1]['ssl'];
+         $this->as = $this->groups[$this->length - 1]['as'];
+      }
 
-      $this->prefix = '/';
-      $this->middlewares = [];
-      $this->module = null;
-      $this->domain = [];
-      $this->ip = [];
-      $this->ssl = false;
-      $this->as = null;
+      $this->length--;
+      if ($this->length <= 0) {
+         $this->prefix = '/';
+         $this->middlewares = [];
+         $this->domain = [];
+         $this->ip = [];
+         $this->ssl = false;
+         $this->as = null;
+      }
    }
 
    public function prefix(string $prefix): self {
@@ -56,11 +64,6 @@ class Router {
 
    public function middleware(array $middlewares): self {
       $this->middlewares = array_merge($this->middlewares, $middlewares);
-      return $this;
-   }
-
-   public function module(string $module): self {
-      $this->module = $module;
       return $this;
    }
 
@@ -150,40 +153,6 @@ class Router {
          if (preg_match($route['pattern'], $this->getUri(), $params)) {
             if ($this->checkIp($route) && $this->checkDomain($route) && $this->checkSSL($route) && $this->checkMethod($route)) {
                $matched = true;
-               array_shift($params);
-
-               $callback = function () use ($route, $params) {
-                  if (is_callable($route['callback'])) {
-                     call_user_func_array($route['callback'], array_values($params));
-                  } elseif (is_array($route['callback'])) {
-                     [$controller, $method] = $route['callback'];
-                     if (!class_exists($controller)) {
-                        throw new RouterException("Controller not found [{$controller}::{$method}]");
-                     }
-                     if (!method_exists($controller, $method)) {
-                        throw new RouterException("Method not found [{$controller}::{$method}]");
-                     }
-                     $instance = $this->container->resolve($controller);
-                     call_user_func_array([$instance, $method], array_values($params));
-                  } else {
-                     throw new RouterException("Invalid route callback");
-                  }
-               };
-
-               $middlewares = array_merge(import_config('services.middlewares.default') ?? [], $route['middlewares'] ?? []);
-               $next = $callback;
-
-               foreach (array_reverse($middlewares) as $middleware) {
-                  if (class_exists($middleware)) {
-                     $instance = $this->container->resolve($middleware);
-                     $current = $next;
-                     $next = function () use ($instance, $current) {
-                        return $instance->handle($current);
-                     };
-                  }
-               }
-
-               $next();
                break;
             }
          }
@@ -197,8 +166,41 @@ class Router {
             throw new RouterException("Route not found [{$this->getUri()}]", 404);
          }
       }
-   }
 
+      array_shift($params);
+      $callback = function () use ($route, $params) {
+         if (is_callable($route['callback'])) {
+            call_user_func_array($route['callback'], array_values($params));
+         } elseif (is_array($route['callback'])) {
+            [$controller, $method] = $route['callback'];
+            if (!class_exists($controller)) {
+               throw new RouterException("Controller not found [{$controller}::{$method}]");
+            }
+            if (!method_exists($controller, $method)) {
+               throw new RouterException("Method not found [{$controller}::{$method}]");
+            }
+            $instance = $this->container->resolve($controller);
+            call_user_func_array([$instance, $method], array_values($params));
+         } else {
+            throw new RouterException("Invalid route callback");
+         }
+      };
+
+      $middlewares = array_merge(import_config('services.middlewares.default') ?? [], $route['middlewares'] ?? []);
+      $next = $callback;
+
+      foreach (array_reverse($middlewares) as $middleware) {
+         if (class_exists($middleware)) {
+            $instance = $this->container->resolve($middleware);
+            $current = $next;
+            $next = function () use ($instance, $current) {
+               return $instance->handle($current);
+            };
+         }
+      }
+
+      $next();
+   }
 
    public function url(string $name, array $params = []): mixed {
       if (isset($this->names[$name])) {
@@ -239,16 +241,22 @@ class Router {
       $pattern = preg_replace('/[\[{\(].*[\]}\)]/U', '([^/]+)', $pattern);
       $pattern = '/^' . str_replace('/', '\/', $pattern) . '$/';
 
+		$routeArray = [
+			'uri'       => $uri,
+			'method'    => $method,
+			'pattern'   => $pattern,
+			'callback'  => $callback
+		];
+
       $this->routes[] = array_filter([
          'uri'         => $uri,
          'method'      => $method,
          'pattern'     => $pattern,
          'callback'    => $callback,
-         'module'      => $this->module ? ucfirst($this->module) : null,
-         'middlewares' => $this->middlewares ?: [],
-         'domain'      => $this->domain ?: [],
-         'ip'          => $this->ip ?: [],
-         'ssl'         => $this->ssl ?: false,
+         'middlewares' => $this->middlewares,
+         'domain'      => $this->domain,
+         'ip'          => $this->ip,
+         'ssl'         => $this->ssl,
       ]);
    }
 
