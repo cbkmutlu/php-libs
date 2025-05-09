@@ -124,11 +124,12 @@ class Cli {
 
       if ($swagger === '--swagger') {
          $template = file_get_contents('System/Cli/swagger.temp');
+         $content = str_replace(['{namespace}', '{class}', '{module}'], [$namespace, $class, $module], $template);
       } else {
          $template = file_get_contents('System/Cli/controller.temp');
+         $content = str_replace(['{namespace}', '{class}'], [$namespace, $class], $template);
       }
 
-      $content = str_replace(['{namespace}', '{class}'], [$namespace, $class], $template);
       $this->dir($location);
       file_put_contents($file, $content);
       return $this->success('Controller successfully created: ' . $location);
