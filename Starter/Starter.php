@@ -19,9 +19,10 @@ class Starter {
       $config = import_config('defines.app');
       import_env($config['env']);
 
-      foreach ($config['routes'] as $route) {
+      foreach (glob(ROOT_DIR . '/' .  $config['routes'] . '/*.php') as $route) {
          import_file($route);
       }
+
       self::$router->run();
    }
 
