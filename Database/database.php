@@ -264,35 +264,26 @@ class Database {
       }
    }
 
-   public function table(string $data): self {
+   public function table(string $table): self {
       $this->pdo();
-      $this->table = $this->prefix . $data;
+      $this->table = $this->prefix . $table;
 
       return $this;
    }
 
-   public function where(array $data): self {
-      $data = implode(' ', $data);
-
+   public function where(string $where): self {
       if ($this->where) {
-         $this->where = $this->where . ' ' . rtrim($data);
+         $this->where = $this->where . ' ' . rtrim($where);
       } else {
-         $this->where = rtrim($data);
+         $this->where = rtrim($where);
       }
 
       return $this;
    }
 
-   public function join(array $data, string $type = 'LEFT'): self {
-      foreach ($data as $left => $right) {
-         [$leftTable, $leftField] = explode('.', $left, 2);
-         [$rightTable, $rightField] = explode('.', $right, 2);
-
-         $leftTable = $this->prefix . trim($leftTable);
-         $rightTable = $this->prefix . trim($rightTable);
-
-         $this->join .= " {$type} JOIN {$leftTable} ON {$leftTable}.{$leftField} = {$rightTable}.{$rightField}";
-      }
+   public function join(string $table, string $type = 'LEFT'): self {
+      $table = $this->prefix . $table;
+      $this->join .= " {$type} JOIN {$table}";
 
       return $this;
    }
@@ -347,20 +338,13 @@ class Database {
 
       foreach ($data as $column => $val) {
          if (is_int($column)) {
-            $values[] = "$val = :$val";
+            $values[] = "`$val` = :$val";
          } else {
-            $values[] = "$column = ". $this->escape((string) $val);
+            $values[] = "`$column` = " . $this->escape((string) $val);
          }
       }
 
       $query .= implode(', ', $values);
-      $this->query = $query;
-
-      return $this;
-   }
-
-   public function delete(): self {
-      $query = "DELETE FROM {$this->table}";
       $this->query = $query;
 
       return $this;
@@ -373,15 +357,22 @@ class Database {
 
       foreach ($data as $column => $val) {
          if (is_int($column)) {
-            $columns[] = "$val";
+            $columns[] = "`$val`";
             $values[] = ":$val";
          } else {
-            $columns[] = "$column";
+            $columns[] = "`$column`";
             $values[] = $this->escape((string) $val);
          }
       }
 
       $query .= '(' . implode(', ', $columns) . ') VALUES (' . implode(', ', $values) . ')';
+      $this->query = $query;
+
+      return $this;
+   }
+
+   public function delete(): self {
+      $query = "DELETE FROM {$this->table}";
       $this->query = $query;
 
       return $this;
