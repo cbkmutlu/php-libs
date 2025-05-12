@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use System\Exception\SystemException;
 use System\Starter\Starter;
+use System\Exception\SystemException;
 
 if (!function_exists('dd')) {
    function dd(mixed $data, bool $stop = false): void {

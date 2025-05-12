@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace System\Exception;
 
-use Whoops\Run as WhoopsRun;
-use Whoops\Handler\PrettyPageHandler as WhoopsPrettyPageHandler;
+use Throwable;
+use ErrorException;
 
 use System\Http\Response;
 
-use Throwable;
-use ErrorException;
+use Whoops\Run as WhoopsRun;
+use Whoops\Handler\PrettyPageHandler as WhoopsPrettyPageHandler;
 
 class ExceptionHandler {
    private static Response $response;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace System\Curl;
 
-use System\Exception\SystemException;
 use System\Language\Language;
+use System\Exception\SystemException;
 
 class Curl {
    private $curl;

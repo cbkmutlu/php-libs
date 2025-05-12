@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace System\Upload;
 
-use System\Exception\SystemException;
 use System\Language\Language;
+use System\Exception\SystemException;
 
 class Upload {
    private $file;

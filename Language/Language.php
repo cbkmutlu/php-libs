@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace System\Language;
 
-use System\Exception\SystemException;
 use System\Session\Session;
+use System\Exception\SystemException;
 
 class Language {
    private $locale;
