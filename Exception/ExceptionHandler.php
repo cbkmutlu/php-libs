@@ -81,13 +81,7 @@ class ExceptionHandler {
    public static function resultApi(Throwable $exception): void {
       $message = $exception->getMessage();
       $code = $exception->getCode();
-
-      header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-      header('Pragma: no-cache');
-      header('Content-type: application/json');
-
       self::$response->json($message, null, null, $code);
-      exit();
    }
 
    public static function resultWeb(Throwable $exception): void {
