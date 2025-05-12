@@ -26,7 +26,7 @@ class Request {
          return $this->filter($this->get, $filter);
       }
 
-      return isset($this->get[$param]) ? $this->filter($this->get[$param], $filter) : false;
+      return isset($this->get[$param]) ? $this->filter($this->get[$param], $filter) : null;
    }
 
    public function post(?string $param = null, $filter = true): mixed {
@@ -34,7 +34,7 @@ class Request {
          return $this->filter($this->post, $filter);
       }
 
-      return isset($this->post[$param]) ? $this->filter($this->post[$param], $filter) : false;
+      return isset($this->post[$param]) ? $this->filter($this->post[$param], $filter) : null;
    }
 
    public function put(?string $param = null, $filter = true): mixed {
@@ -44,7 +44,7 @@ class Request {
          return $this->filter($_PUT, $filter);
       }
 
-      return isset($_PUT[$param]) ? $this->filter($_PUT[$param], $filter) : false;
+      return isset($_PUT[$param]) ? $this->filter($_PUT[$param], $filter) : null;
    }
 
    public function patch(?string $param = null, $filter = true): mixed {
@@ -54,7 +54,7 @@ class Request {
          return $this->filter($_PATCH, $filter);
       }
 
-      return isset($_PATCH[$param]) ? $this->filter($_PATCH[$param], $filter) : false;
+      return isset($_PATCH[$param]) ? $this->filter($_PATCH[$param], $filter) : null;
    }
 
    public function delete(?string $param = null, $filter = true): mixed {
@@ -64,7 +64,7 @@ class Request {
          return $this->filter($_DELETE, $filter);
       }
 
-      return isset($_DELETE[$param]) ? $this->filter($_DELETE[$param], $filter) : false;
+      return isset($_DELETE[$param]) ? $this->filter($_DELETE[$param], $filter) : null;
    }
 
    public function json(?string $param = null, bool $filter = true): mixed {
@@ -85,7 +85,7 @@ class Request {
          return $this->filter($body, $filter);
       }
 
-      return isset($body[$param]) ? $this->filter($body[$param], $filter) : [];
+      return isset($body[$param]) ? $this->filter($body[$param], $filter) : null;
    }
 
    public function files(?string $param = null): mixed {
@@ -93,7 +93,7 @@ class Request {
          return $this->files;
       }
 
-      return isset($this->files[$param]) ? $this->files[$param] : false;
+      return isset($this->files[$param]) ? $this->files[$param] : null;
    }
 
    public function server(?string $param = null): mixed {
@@ -109,7 +109,7 @@ class Request {
          return $this->cookie;
       }
 
-      return isset($this->cookie[$param]) ? $this->cookie[$param] : false;
+      return isset($this->cookie[$param]) ? $this->cookie[$param] : null;
    }
 
    public function all(bool $filter = true): mixed {
@@ -128,7 +128,7 @@ class Request {
          $response[$key] = $val;
       }
 
-      return $response[ucwords($param)];
+      return $response[ucwords($param)] ?? null;
    }
 
    public function method(): string {
