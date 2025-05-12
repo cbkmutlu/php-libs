@@ -22,8 +22,8 @@ use OpenApi\Generator;
  * @OA\OpenApi(security={{"Bearer": {}}})
  */
 class {class} {
-   public function invetoryJson() {
-      $openapi = Generator::scan([$_SERVER['DOCUMENT_ROOT'] . '/App/Modules/{module}']);
+   public function json() {
+      $openapi = Generator::scan([$_SERVER['DOCUMENT_ROOT'] . '/App/Modules/{module}/Controllers']);
       header('Content-type: application/json; charset=UTF-8');
       print($openapi->toJson());
    }
