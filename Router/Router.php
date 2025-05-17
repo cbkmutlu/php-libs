@@ -162,7 +162,6 @@ class Router {
          if ($this->error && is_callable($this->error)) {
             call_user_func($this->error);
          } else {
-            header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
             throw new RouterException("Route not found [{$this->getUri()}]", 404);
          }
       }
@@ -240,13 +239,6 @@ class Router {
       $uri = $pattern;
       $pattern = preg_replace('/[\[{\(].*[\]}\)]/U', '([^/]+)', $pattern);
       $pattern = '/^' . str_replace('/', '\/', $pattern) . '$/';
-
-		$routeArray = [
-			'uri'       => $uri,
-			'method'    => $method,
-			'pattern'   => $pattern,
-			'callback'  => $callback
-		];
 
       $this->routes[] = array_filter([
          'uri'         => $uri,

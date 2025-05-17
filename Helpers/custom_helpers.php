@@ -335,9 +335,9 @@ if (!function_exists('url_route')) {
 if (!function_exists('url_redirect')) {
    function url_redirect(string $url, int $delay = 0): void {
       if ($delay > 0) {
-         header("Refresh:" . $delay . ";url=" . $url);
+         header('Refresh: ' . $delay . ';url=' . $url);
       } else {
-         header("Location:" . $url);
+         header('Location: ' . $url);
       }
       exit();
    }

@@ -85,9 +85,20 @@ class ExceptionHandler {
    }
 
    public static function resultWeb(Throwable $exception): void {
+      $code = $exception->getCode();
+      http_response_code($code);
+
+      $config = import_config('defines.header');
+      header('Access-Control-Allow-Origin: ' . $config['allow-origin']);
+      header('Access-Control-Allow-Headers: ' . $config['allow-headers']);
+      header('Access-Control-Allow-Methods: ' . $config['allow-methods']);
+      header('Access-Control-Allow-Credentials: ' . $config['allow-credentials']);
+      header('Content-Type: text/html; charset=UTF-8');
+
       $whoops = new WhoopsRun;
       $whoops->pushHandler(new WhoopsPrettyPageHandler);
       $whoops->register();
+      $whoops->sendHttpCode($code);
       throw $exception;
    }
 }

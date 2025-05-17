@@ -28,8 +28,16 @@ class Response {
    }
 
    public function json(?string $message = null, mixed $data = null, mixed $error = null, int $code = 200, ?array $meta = null): void {
-      header_remove();
       $this->status($code);
+
+      $response = [
+         'success' => $code < 300,
+         'message' => $message,
+         'data' => $data,
+         'error' => $error,
+         'meta' => $meta,
+         'status' => $code
+      ];
 
       if (ENV === 'production') {
          if ($code >= 200 && $code < 300) {
@@ -40,25 +48,20 @@ class Response {
          }
       }
 
-      header('Content-type: application/json; charset=UTF-8');
-
-      $response = [
-         'status' => $code < 300,
-         'message' => $message,
-         'data' => $data,
-         'error' => $error,
-         'meta' => $meta
-      ];
-
+      $config = import_config('defines.header');
+      header('Access-Control-Allow-Origin: ' . $config['allow-origin']);
+      header('Access-Control-Allow-Headers: ' . $config['allow-headers']);
+      header('Access-Control-Allow-Methods: ' . $config['allow-methods']);
+      header('Access-Control-Allow-Credentials: ' . $config['allow-credentials']);
+      header('Content-Type: application/json; charset=UTF-8');
       print(json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
    }
 
    public function body(?string $body, ?int $code = null): void {
-      header_remove();
       $this->status($code);
-
-      header('Content-type: text/html; charset=UTF-8');
       $this->body = $body;
-      print($this->body);
+
+      header('Content-Type: text/html; charset=UTF-8');
+      print($body);
    }
 }

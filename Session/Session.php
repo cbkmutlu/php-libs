@@ -96,7 +96,7 @@ class Session {
          $this->save('session_flash', $data);
 
          if (!is_null($url)) {
-            header("Location: $url");
+            url_redirect($url);
          }
 
          return $this->read('session_flash');
