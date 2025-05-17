@@ -44,7 +44,7 @@ class Cli {
          if (isset($params[1])) {
             switch ($params[0]) {
                case 'controller':
-                  return $this->createController($params[1], $params[2]);
+                  return $this->createController($params[1], $params[2] ?? null);
                case 'service':
                   return $this->createService($params[1]);
                case 'repository':
@@ -132,7 +132,7 @@ class Cli {
 
       $this->dir($location);
       file_put_contents($file, $content);
-      return $this->success('Controller successfully created: ' . $location);
+      return $this->success('Controller successfully created: ' . $file);
    }
 
    private function createService(string $data): string {
@@ -157,7 +157,7 @@ class Cli {
       $content = str_replace(['{namespace}', '{class}'], [$namespace, $class], $template);
       $this->dir($location);
       file_put_contents($file, $content);
-      return $this->success('Service successfully created: ' . $location);
+      return $this->success('Service successfully created: ' . $file);
    }
 
    private function createRepository(string $data): string {
@@ -182,7 +182,7 @@ class Cli {
       $content = str_replace(['{namespace}', '{class}'], [$namespace, $class], $template);
       $this->dir($location);
       file_put_contents($file, $content);
-      return $this->success('Repository successfully created: ' . $location);
+      return $this->success('Repository successfully created: ' . $file);
    }
 
    private function createModel(string $data): string {
@@ -207,7 +207,7 @@ class Cli {
       $content = str_replace(['{namespace}', '{class}'], [$namespace, $class], $template);
       $this->dir($location);
       file_put_contents($file, $content);
-      return $this->success('Model successfully created: ' . $location);
+      return $this->success('Model successfully created: ' . $file);
    }
 
    private function createMigration(string $data): string {
@@ -222,6 +222,7 @@ class Cli {
       } else {
          return $this->error('Invalid command: ' . $data);
       }
+      $name =  date('Y_m_d_His') . '_' . $class;
 
       foreach (glob(ROOT_DIR . '/' .  $search . '/*.php') as $migration) {
          require_once $migration;
@@ -231,12 +232,12 @@ class Cli {
          return $this->info('Migration already exists: ' . $class);
       }
 
-      $file = "$location/$class.php";
+      $file = "$location/$name.php";
       $template = file_get_contents('System/Cli/migration.temp');
       $content = str_replace('{class}', $class, $template);
       $this->dir($location);
       file_put_contents($file, $content);
-      return $this->success('Migration successfully created: ' . $location);
+      return $this->success('Migration successfully created: ' . $file);
    }
 
    private function createMiddleware(string $middleware): string {

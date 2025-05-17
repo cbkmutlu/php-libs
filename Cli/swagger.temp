@@ -24,7 +24,7 @@ use OpenApi\Generator;
 class {class} {
    public function json() {
       $openapi = Generator::scan([$_SERVER['DOCUMENT_ROOT'] . '/App/Modules/{module}/Controllers']);
-      header('Content-type: application/json; charset=UTF-8');
+      header('Content-Type: application/json; charset=UTF-8');
       print($openapi->toJson());
    }
 }
