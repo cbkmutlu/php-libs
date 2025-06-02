@@ -229,7 +229,7 @@ class Database {
       }
    }
 
-   public function fetchRow(?int $fetch = null, mixed $args = null): mixed {
+   public function fetch(?int $fetch = null, mixed $args = null): mixed {
       return $this->fetchAll($fetch, $args, false);
    }
 
@@ -247,7 +247,7 @@ class Database {
       }
 
       $result = $this->query("SELECT * FROM " . $this->prefix($table) . " WHERE id=" . $this->lastInsertId());
-      return $result->fetchRow();
+      return $result->fetch();
    }
 
    public function getLastQuery(): string {
