@@ -63,7 +63,7 @@ class Database {
       return $this;
    }
 
-   private function pdo(): PDO {
+   public function pdo(): PDO {
       if (!$this->pdo) {
          $this->connect();
       }
@@ -94,29 +94,42 @@ class Database {
       }
    }
 
-   public function execute(array $params = []): self {
-      try {
+   public function prepare(?string $query = null): self {
+      if (is_null($query)) {
          $this->query .= $this->join ? $this->join : '';
          $this->query .= $this->where ? ' WHERE ' . $this->where : '';
          $this->query .= $this->groupBy ? ' GROUP BY ' . $this->groupBy : '';
          $this->query .= $this->having ? ' HAVING ' . $this->having : '';
          $this->query .= $this->orderBy ? ' ORDER BY ' . $this->orderBy : '';
          $this->query .= $this->limit ? ' LIMIT ' . $this->limit : '';
-         if ($this->debug) {
-            var_dump($this->query, $params);
-            $this->debug = false;
-            exit();
-         }
-         $this->reset();
-         $this->state = $this->pdo()->prepare($this->query);
-         $this->total++;
+      } else {
+         $this->query = $query;
+      }
 
+      if ($this->debug) {
+         print_r($this->query . "\n");
+         $this->debug = false;
+         exit();
+      }
+
+      try {
+         $this->positional = false;
+         $this->state = $this->pdo()->prepare($this->query);
+         return $this;
+      } catch (PDOException $e) {
+         throw new DatabaseException('Prepare ' . $e->getMessage());
+      }
+   }
+
+   public function execute(array $params = []): self {
+      try {
          if ($this->positional) {
             $this->state->execute();
          } else {
             $this->state->execute($params);
          }
 
+         $this->total++;
          return $this;
       } catch (PDOException $e) {
          if ($this->progress) {
@@ -193,7 +206,7 @@ class Database {
       return $this->prefix . $table;
    }
 
-   public function getAll(?string $fetch = null, mixed $args = null, bool $all = true): mixed {
+   public function fetchAll(?string $fetch = null, mixed $args = null, bool $all = true): mixed {
       try {
          if (!is_null($fetch)) {
             $mode = 'PDO::' . $fetch;
@@ -216,11 +229,11 @@ class Database {
       }
    }
 
-   public function getRow(?int $fetch = null, mixed $args = null): mixed {
-      return $this->getAll($fetch, $args, false);
+   public function fetchRow(?int $fetch = null, mixed $args = null): mixed {
+      return $this->fetchAll($fetch, $args, false);
    }
 
-   public function getLastId(): string {
+   public function lastInsertId(): string {
       try {
          return $this->pdo()->lastInsertId();
       } catch (PDOException $e) {
@@ -228,15 +241,13 @@ class Database {
       }
    }
 
-   public function getLastRow(string $table): mixed {
-      $result = $this->query("SELECT * FROM " . $this->prefix($table) . " WHERE id=" . $this->getLastId());
-      $result = $result->getRow();
-
-      if (empty($result)) {
-         throw new DatabaseException('Get Last Row Error');
+   public function lastInsertRow(?string $table = null): mixed {
+      if (is_null($table)) {
+         $table = $this->table;
       }
 
-      return $result;
+      $result = $this->query("SELECT * FROM " . $this->prefix($table) . " WHERE id=" . $this->lastInsertId());
+      return $result->fetchRow();
    }
 
    public function getLastQuery(): string {
@@ -266,6 +277,7 @@ class Database {
 
    public function table(string $table): self {
       $this->pdo();
+      $this->reset();
       $this->table = $this->prefix . $table;
 
       return $this;
@@ -333,48 +345,41 @@ class Database {
 
 
    public function update(array $data): self {
-      $query = "UPDATE {$this->table} SET ";
-      $values = [];
-
-      foreach ($data as $column => $val) {
-         if (is_int($column)) {
-            $values[] = "`$val` = :$val";
+      $clause = implode(', ', array_map(function ($key, $value) {
+         if (is_int($key)) {
+            return "`$value` = :$value";
+         } elseif (is_array($value)) {
+            return "`$key` = " . $value[0];
          } else {
-            $values[] = "`$column` = " . $this->escape((string) $val);
+            return "`$key` = " . $this->escape((string) $value);
          }
-      }
+      }, array_keys($data), $data));
 
-      $query .= implode(', ', $values);
-      $this->query = $query;
-
+      $this->query = "UPDATE {$this->table} SET {$clause}";
       return $this;
    }
 
    public function insert(array $data): self {
-      $query = "INSERT INTO {$this->table} ";
-      $columns = [];
-      $values = [];
+      $columns = implode(', ', array_map(function ($key, $value) {
+         return is_int($key) ? "`$value`" : "`$key`";
+      }, array_keys($data), $data));
 
-      foreach ($data as $column => $val) {
-         if (is_int($column)) {
-            $columns[] = "`$val`";
-            $values[] = ":$val";
+      $values = implode(', ', array_map(function ($key, $value) {
+         if (is_int($key)) {
+            return ":$value";
+         } elseif (is_array($value)) {
+            return $value[0];
          } else {
-            $columns[] = "`$column`";
-            $values[] = $this->escape((string) $val);
+            return $this->escape((string) $value);
          }
-      }
+      }, array_keys($data), $data));
 
-      $query .= '(' . implode(', ', $columns) . ') VALUES (' . implode(', ', $values) . ')';
-      $this->query = $query;
-
+      $this->query = "INSERT INTO {$this->table} ({$columns}) VALUES ({$values})";
       return $this;
    }
 
    public function delete(): self {
-      $query = "DELETE FROM {$this->table}";
-      $this->query = $query;
-
+      $this->query = "DELETE FROM {$this->table}";
       return $this;
    }
 
