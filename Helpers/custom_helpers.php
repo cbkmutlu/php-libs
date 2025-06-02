@@ -173,8 +173,11 @@ if (!function_exists('array_keys_diff')) {
 }
 
 if (!function_exists('escape_xss')) {
-   function escape_xss(string $data): string {
-      return trim(htmlspecialchars($data, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+   function escape_xss(mixed $data): mixed {
+      if (is_string($data)) {
+         return trim(htmlspecialchars($data, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+      }
+      return $data;
    }
 }
 

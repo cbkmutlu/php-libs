@@ -262,15 +262,18 @@ class Request {
    }
 
    public function filter(mixed $data = null, bool $filter = false): mixed {
-      if (is_null($data)) {
-         return null;
+      if (!$filter || is_null($data)) {
+         return $data;
       }
 
       if (is_array($data)) {
-         return $filter === true ? array_map('escape_xss', $data) : $data;
+         foreach ($data as $key => $value) {
+            $data[$key] = $this->filter($value, true); // recursive
+         }
+         return $data;
       }
 
-      return $filter === true ? escape_xss($data) : $data;
+      return escape_xss($data);
    }
 
    public function isUri(): bool {
