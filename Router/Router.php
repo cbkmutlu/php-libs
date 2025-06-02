@@ -314,6 +314,16 @@ class Router {
       $headers = getallheaders();
       $method = $_SERVER['REQUEST_METHOD'];
 
+      if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+         $config = import_config('defines.header');
+         header('Access-Control-Allow-Origin: ' . $config['allow-origin']);
+         header('Access-Control-Allow-Headers: ' . $config['allow-headers']);
+         header('Access-Control-Allow-Methods: ' . $config['allow-methods']);
+         header('Access-Control-Allow-Credentials: ' . $config['allow-credentials']);
+         http_response_code(204);
+         exit();
+      }
+
       if ($_SERVER['REQUEST_METHOD'] === 'HEAD') {
          ob_start();
          $method = 'GET';
