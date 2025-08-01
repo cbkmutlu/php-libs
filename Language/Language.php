@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace System\Language;
 
 use System\Session\Session;
+use App\Core\Enums\LanguageEnum;
 use System\Exception\SystemException;
 
 class Language {
@@ -23,7 +24,11 @@ class Language {
       }
    }
 
-   public function setLocale(string $locale): self {
+   public function setLocale(string|int $locale): self {
+      if (is_int($locale)) {
+         $locale = LanguageEnum::resolve($locale);
+      }
+
       if ($this->session->status()) {
          $this->session->save('session_locale', $locale);
       }
