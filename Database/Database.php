@@ -17,14 +17,7 @@ class Database {
    private $progress;
    private $prefix;
    private $positional;
-   private $where;
-   private $select;
    private $table;
-   private $join;
-   private $orderBy;
-   private $groupBy;
-   private $limit;
-   private $having;
    private $debug;
 
    public function connect(?string $connection = null): self {
@@ -39,7 +32,10 @@ class Database {
       ];
       $connection = is_null($connection) ? $config['default'] : $connection;
       $config = $config['connections'][$connection];
-      $this->prefix = $config['db_prefix'];
+
+      if (!$this->prefix) {
+         $this->prefix = $config['db_prefix'];
+      }
 
       if ($config['db_driver'] === 'mysql' || $config['db_driver'] === 'pgsql') {
          $port = $config['db_port'] !== '' ? "port={$config['db_port']};" : '';
@@ -87,23 +83,12 @@ class Database {
 
          return $this;
       } catch (PDOException $e) {
-         if ($this->progress) {
-            $this->rollback();
-         }
-
          throw new DatabaseException('Query ' . $e->getMessage());
       }
    }
 
    public function prepare(?string $query = null): self {
-      if (is_null($query)) {
-         $this->query .= $this->join ? $this->join : '';
-         $this->query .= $this->where ? ' WHERE ' . $this->where : '';
-         $this->query .= $this->groupBy ? ' GROUP BY ' . $this->groupBy : '';
-         $this->query .= $this->having ? ' HAVING ' . $this->having : '';
-         $this->query .= $this->orderBy ? ' ORDER BY ' . $this->orderBy : '';
-         $this->query .= $this->limit ? ' LIMIT ' . $this->limit : '';
-      } else {
+      if ($query) {
          $this->query = $query;
       }
 
@@ -124,6 +109,12 @@ class Database {
 
    public function execute(array $params = []): self {
       try {
+         if ($this->debug) {
+            print_r($params);
+            $this->debug = false;
+            exit();
+         }
+
          if ($this->positional) {
             $this->state->execute();
          } else {
@@ -131,12 +122,10 @@ class Database {
          }
 
          $this->total++;
+         $this->positional = null;
+         $this->table = null;
          return $this;
       } catch (PDOException $e) {
-         if ($this->progress) {
-            $this->rollback();
-         }
-
          throw new DatabaseException('Execute ' . $e->getMessage());
       }
    }
@@ -203,8 +192,9 @@ class Database {
       }
    }
 
-   public function prefix(string $table): string {
-      return $this->prefix . $table;
+   public function prefix(string $prefix): self {
+      $this->prefix = $prefix;
+      return $this;
    }
 
    public function fetchAll(?string $fetch = null, mixed $args = null, bool $all = true): mixed {
@@ -230,7 +220,7 @@ class Database {
       }
    }
 
-   public function fetch(?int $fetch = null, mixed $args = null): mixed {
+   public function fetch(?string $fetch = null, mixed $args = null): mixed {
       return $this->fetchAll($fetch, $args, false);
    }
 
@@ -247,19 +237,19 @@ class Database {
          $table = $this->table;
       }
 
-      $result = $this->query("SELECT * FROM " . $this->prefix($table) . " WHERE id=" . $this->lastInsertId());
+      $result = $this->query("SELECT * FROM {$this->prefix}{$table} WHERE id=" . $this->lastInsertId());
       return $result->fetch();
    }
 
-   public function getLastQuery(): string {
+   public function lastQuery(): string {
       return $this->query;
    }
 
-   public function getTotalQuery(): int {
+   public function totalQuery(): int {
       return $this->total;
    }
 
-   public function getAffectedRows(): int {
+   public function affectedRows(): int {
       try {
          return $this->state->rowCount();
       } catch (PDOException $e) {
@@ -278,103 +268,67 @@ class Database {
 
    public function table(string $table): self {
       $this->pdo();
-      $this->reset();
-      $this->table = $this->prefix . $table;
+      $this->table = "{$this->prefix}{$table}";
 
       return $this;
    }
 
-   public function where(string $where): self {
-      if ($this->where) {
-         $this->where = $this->where . ' ' . rtrim($where);
-      } else {
-         $this->where = rtrim($where);
+   public function where(array $data): self {
+      $conditions = [];
+
+      foreach ($data as $key => $value) {
+         if (is_int($key)) {
+            $conditions[] = "`{$value}` = :{$value}";
+         } else {
+            $conditions[] = "`{$key}` = {$this->escape((string)$value)}";
+         }
       }
 
-      return $this;
-   }
-
-   public function join(string $table, string $type = 'LEFT'): self {
-      $table = $this->prefix . $table;
-      $this->join .= " {$type} JOIN {$table}";
-
-      return $this;
-   }
-
-   public function orderBy(string $data): self {
-      if (stristr($data, ' ') || strtolower($data) === 'rand()') {
-         $this->orderBy = $data;
-      } else {
-         $this->orderBy = $data . ' ASC';
+      $conditions = implode(' AND ', $conditions);
+      if ($conditions) {
+         $this->query .= " WHERE $conditions";
       }
-
-      return $this;
-   }
-
-   public function groupBy(string $data): self {
-      $this->groupBy = $data;
-
-      return $this;
-   }
-
-   public function limit(int $data): self {
-      $this->limit = $data;
-
-      return $this;
-   }
-
-   public function having(string $data): self {
-      $this->having = $data;
-
       return $this;
    }
 
    public function select(array $data = ['*']): self {
-      $data = rtrim(implode(', ', $data));
-
-      if ($this->select) {
-         $this->select = $this->select . ', ' . $data;
-      } else {
-         $this->select = $data;
-      }
-
-      $query = "SELECT {$this->select} FROM {$this->table}";
-      $this->query = $query;
-
+      $select = rtrim(implode(', ', $data));
+      $this->query = "SELECT {$select} FROM {$this->table}";
       return $this;
    }
 
-
    public function update(array $data): self {
-      $clause = implode(', ', array_map(function ($key, $value) {
-         if (is_int($key)) {
-            return "`$value` = :$value";
-         } elseif (is_array($value)) {
-            return "`$key` = " . $value[0];
-         } else {
-            return "`$key` = " . $this->escape((string) $value);
-         }
-      }, array_keys($data), $data));
+      $clauses = [];
 
-      $this->query = "UPDATE {$this->table} SET {$clause}";
+      foreach ($data as $key => $value) {
+         if (is_int($key)) {
+            $clauses[] = "`{$value}` = :{$value}";
+         } else {
+            $clauses[] = "`{$key}` = {$this->escape((string)$value)}";
+         }
+      }
+
+      $clauses = implode(', ', $clauses);
+      $this->query = "UPDATE {$this->table} SET {$clauses}";
       return $this;
    }
 
    public function insert(array $data): self {
-      $columns = implode(', ', array_map(function ($key, $value) {
-         return is_int($key) ? "`$value`" : "`$key`";
-      }, array_keys($data), $data));
+      $columns = [];
+      $values = [];
 
-      $values = implode(', ', array_map(function ($key, $value) {
+      foreach ($data as $key => $value) {
          if (is_int($key)) {
-            return ":$value";
-         } elseif (is_array($value)) {
-            return $value[0];
+            $columns[] = "`{$value}`";
+            $values[] = ":{$value}";
          } else {
-            return $this->escape((string) $value);
+            $columns[] = "`{$key}`";
+            $values[] = "{$this->escape((string)$value)}";
          }
-      }, array_keys($data), $data));
+      }
 
+      $columns = implode(', ', $columns);
+      $values = implode(', ', $values);
       $this->query = "INSERT INTO {$this->table} ({$columns}) VALUES ({$values})";
       return $this;
    }
@@ -382,17 +336,5 @@ class Database {
    public function delete(): self {
       $this->query = "DELETE FROM {$this->table}";
       return $this;
-   }
-
-   private function reset(): void {
-      $this->positional = null;
-      $this->where = null;
-      $this->select = null;
-      $this->table = null;
-      $this->join = null;
-      $this->orderBy = null;
-      $this->groupBy = null;
-      $this->limit = null;
-      $this->having = null;
    }
 }
