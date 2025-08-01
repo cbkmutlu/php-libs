@@ -10,7 +10,6 @@ use System\Exception\SystemException;
 class Upload {
    private $file;
    private $path;
-   private $filename;
    private $allowed_types;
    private $allowed_mimes;
    private $max_width = 0;
@@ -19,35 +18,43 @@ class Upload {
    private $min_height = 0;
    private $max_size = 0;
    private $min_size = 0;
-   private $error;
+   private $error = [];
 
    public function __construct(
       private Language $language
    ) {
       $config = import_config('defines.upload');
-      $this->path = ROOT_DIR . DS . $config['path'];
+      $this->path = $config['path'];
       $this->allowed_types = $config['allowed_types'];
       $this->allowed_mimes = $config['allowed_mimes'];
    }
 
-   public function handle(array $file): bool {
-      if (!$this->checkFile($file)) {
+   public function handle(array $file, ?string $filename = null): bool {
+      if (empty($file['tmp_name'])) {
+         $this->error['err_no_file'] = $this->language->system("upload.err_no_file");
          return false;
       }
 
-      if (!is_uploaded_file($this->file['tmp_name'])) {
+      // $filename = $filename ?? $file['name'];
+      $pathname = ROOT_DIR . DS . $this->path;
+      $filename = $this->checkFileName($pathname, $filename ?? $file['name']);
+
+      $this->file = $file;
+      $this->checkTypes();
+      $this->checkMimes();
+      $this->checkDimension();
+      $this->checkSize();
+      $this->checkPath();
+
+      if (!is_uploaded_file($file['tmp_name'])) {
          throw new SystemException('File upload error');
       }
 
-      if (empty($this->filename)) {
-         $this->filename = $this->file['name'];
-      }
-
-      if (!move_uploaded_file($this->file['tmp_name'], $this->path . '/' . $this->filename)) {
+      if (!move_uploaded_file($file['tmp_name'], $pathname . DS . $filename)) {
          throw new SystemException('File upload error');
       }
 
-      return true;
+      return empty($this->error);
    }
 
    public function error(): array {
@@ -55,21 +62,12 @@ class Upload {
    }
 
    public function setPath(string $path): self {
-      $this->path = ROOT_DIR . DS . $path;
+      $this->path = $path;
       return $this;
    }
 
    public function getPath(): string {
       return $this->path;
-   }
-
-   public function setFilename(string $name): self {
-      $this->filename = $name;
-      return $this;
-   }
-
-   public function getFilename(): string {
-      return $this->filename;
    }
 
    public function setAllowedTypes(array $types): self {
@@ -144,21 +142,19 @@ class Upload {
       return $this->min_size;
    }
 
-   private function checkFile(array $file): bool {
-      if (empty($file['tmp_name'])) {
-         $this->error['err_no_file'] = $this->language->system("upload.err_no_file");
-         return false;
+   private function checkFileName(string $directory, string $filename): string {
+      $pathinfo = pathinfo($filename);
+      $basename = $pathinfo['filename'];
+      $extension = isset($pathinfo['extension']) ? '.' . $pathinfo['extension'] : '';
+      $i = 1;
+      $filename = $basename . $extension;
+
+      while (file_exists($directory . '/' . $filename)) {
+         $filename = $basename . "($i)" . $extension;
+         $i++;
       }
 
-      $this->file = $file;
-
-      $this->checkTypes();
-      $this->checkMimes();
-      $this->checkDimension();
-      $this->checkSize();
-      $this->checkPath();
-
-      return empty($this->error);
+      return $filename;
    }
 
    private function checkDimension(): void {
@@ -196,7 +192,6 @@ class Upload {
       }
    }
 
-
    private function checkTypes(): void {
       $type = pathinfo($this->file['name'], PATHINFO_EXTENSION);
       if (!in_array($type, $this->allowed_types)) {
@@ -222,12 +217,13 @@ class Upload {
    }
 
    private function checkPath(): void {
-      if (!check_path($this->path)) {
-         throw new SystemException("File upload directory is invalid [{$this->path}]");
+      $pathname = ROOT_DIR . DS . $this->path;
+      if (!check_path($pathname)) {
+         throw new SystemException("File upload directory is invalid [{$pathname}]");
       }
 
-      if (!check_permission($this->path)) {
-         throw new SystemException("File upload directory is not writable [{$this->path}]");
+      if (!check_permission($pathname)) {
+         throw new SystemException("File upload directory is not writable [{$pathname}]");
       }
    }
 }
