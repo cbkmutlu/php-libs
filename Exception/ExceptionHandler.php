@@ -79,13 +79,14 @@ class ExceptionHandler {
    }
 
    public static function resultApi(Throwable $exception): void {
-      $message = $exception->getMessage();
-      $code = $exception->getCode();
-      self::$response->json($message, null, null, $code);
+      $code = $exception->getCode() ?: 500;
+      $message = $exception->getMessage() ?: 'Internal Server Error';
+      $message = json_decode($message) ?? $message;
+      self::$response->json(null, null, $message, $code);
    }
 
    public static function resultWeb(Throwable $exception): void {
-      $code = $exception->getCode();
+      $code = $exception->getCode() ?: 500;
       http_response_code($code);
 
       $config = import_config('defines.header');
