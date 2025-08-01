@@ -39,14 +39,8 @@ class Response {
          'status' => $code
       ];
 
-      if (ENV === 'production') {
-         if ($code >= 200 && $code < 300) {
-            header('Cache-Control: no-transform, public, max-age=300, s-maxage=900');
-         } else {
-            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-            header('Pragma: no-cache');
-         }
-      }
+      header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+      header('Pragma: no-cache');
 
       $config = import_config('defines.header');
       header('Access-Control-Allow-Origin: ' . $config['allow-origin']);
