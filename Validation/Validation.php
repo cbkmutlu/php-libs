@@ -17,6 +17,10 @@ class Validation {
    ) {
    }
 
+   public function locale(int $lang_id): void {
+      $this->language->setLocale($lang_id);
+   }
+
    public function handle(): bool {
       foreach ($this->rules as $key => $value) {
          $rules = explode('|', $value);
@@ -42,25 +46,25 @@ class Validation {
                   }
                } else {
                   if ($nullable) {
-                     if (is_array($this->data[$key])) {
-                        foreach ($this->data[$key] as $k => $v) {
-                           if (!$this->nullable($v) && !$this->$filter($v, $params)) {
-                              $this->error[$key][$k]['err_' . $filter] = $this->language->system('validation.err_' . $filter, [$k, $params]);
-                           }
-                        }
-                     }
+                     // if (is_array($this->data[$key])) {
+                     //    foreach ($this->data[$key] as $k => $v) {
+                     //       if (!$this->nullable($v) && !$this->$filter($v, $params)) {
+                     //          $this->error[$key][$k]['err_' . $filter] = $this->language->system('validation.err_' . $filter, [$k, $params]);
+                     //       }
+                     //    }
+                     // }
 
                      if (!$this->nullable($this->data[$key]) && !$this->$filter($this->data[$key], $params)) {
                         $this->error[$key]['err_' . $filter] = $this->language->system('validation.err_' . $filter, [$this->labels[$key], $params]);
                      }
                   } else {
-                     if (is_array($this->data[$key])) {
-                        foreach ($this->data[$key] as $k => $v) {
-                           if (!$this->$filter($v, $params)) {
-                              $this->error[$key][$k]['err_' . $filter] = $this->language->system('validation.err_' . $filter, [$k, $params]);
-                           }
-                        }
-                     }
+                     // if (is_array($this->data[$key])) {
+                     //    foreach ($this->data[$key] as $k => $v) {
+                     //       if (!$this->$filter($v, $params)) {
+                     //          $this->error[$key][$k]['err_' . $filter] = $this->language->system('validation.err_' . $filter, [$k, $params]);
+                     //       }
+                     //    }
+                     // }
 
                      if (!$this->$filter($this->data[$key], $params)) {
                         $this->error[$key]['err_' . $filter] = $this->language->system('validation.err_' . $filter, [$this->labels[$key], $params]);
@@ -69,25 +73,25 @@ class Validation {
                }
             } else {
                if ($nullable) {
-                  if (is_array($this->data[$key])) {
-                     foreach ($this->data[$key] as $k => $v) {
-                        if (!$this->nullable($v) && !$this->$rule($v)) {
-                           $this->error[$key][$k]['err_' . $rule] = $this->language->system('validation.err_' . $rule, [$k]);
-                        }
-                     }
-                  }
+                  // if (is_array($this->data[$key])) {
+                  //    foreach ($this->data[$key] as $k => $v) {
+                  //       if (!$this->nullable($v) && !$this->$rule($v)) {
+                  //          $this->error[$key][$k]['err_' . $rule] = $this->language->system('validation.err_' . $rule, [$k]);
+                  //       }
+                  //    }
+                  // }
 
                   if (!$this->nullable($this->data[$key]) && !$this->$rule($this->data[$key])) {
                      $this->error[$key]['err_' . $rule] = $this->language->system('validation.err_' . $rule, [$this->labels[$key]]);
                   }
                } else {
-                  if (is_array($this->data[$key])) {
-                     foreach ($this->data[$key] as $k => $v) {
-                        if (!$this->$rule($v)) {
-                           $this->error[$key][$k]['err_' . $rule] = $this->language->system('validation.err_' . $rule, [$k]);
-                        }
-                     }
-                  }
+                  // if (is_array($this->data[$key])) {
+                  //    foreach ($this->data[$key] as $k => $v) {
+                  //       if (!$this->$rule($v)) {
+                  //          $this->error[$key][$k]['err_' . $rule] = $this->language->system('validation.err_' . $rule, [$k]);
+                  //       }
+                  //    }
+                  // }
 
                   if (!$this->$rule($this->data[$key])) {
                      $this->error[$key]['err_' . $rule] = $this->language->system('validation.err_' . $rule, [$this->labels[$key]]);
@@ -97,18 +101,31 @@ class Validation {
          }
       }
 
+      // reset
+      $this->labels = [];
+      $this->rules = [];
+      $this->data = [];
+
       return empty($this->error);
    }
 
    public function error(): array {
-      return $this->error;
+      $error = $this->error;
+      $this->error = [];
+
+      return $error;
    }
 
    public function rules(array $params): void {
-      foreach ($params as $rule) {
-         [$key, $rules, $label] = $rule;
-         $this->labels[$key] = $label;
-         $this->rules[$key] = $rules;
+      foreach ($params as $key => $value) {
+         if (is_array($value)) {
+            [$field, $rules, $label] = $value;
+            $this->labels[$field] = $label;
+            $this->rules[$field] = $rules;
+         } else {
+            $this->labels[$key] = $key;
+            $this->rules[$key] = $value;
+         }
       }
    }
 
@@ -119,11 +136,11 @@ class Validation {
    }
 
    private function nullable(mixed $data): bool {
-      return is_array($data) ? (empty($data)) : (trim($data) === '');
+      return is_array($data) ? (empty($data)) : (trim((string) $data) === '');
    }
 
    protected function required(mixed $data): bool {
-      return is_array($data) ? (!empty($data)) : (trim($data) !== '');
+      return is_array($data) ? (!empty($data)) : (trim((string) $data) !== '');
    }
 
    protected function numeric(mixed $data): bool {
@@ -135,15 +152,19 @@ class Validation {
    }
 
    protected function min_len(mixed $data, mixed $length): bool {
-      return (strlen(trim($data)) >= $length);
+      return (strlen(trim((string) $data)) >= $length);
    }
 
    protected function max_len(mixed $data, mixed $length): bool {
-      return (strlen(trim($data)) <= $length);
+      return (strlen(trim((string) $data)) <= $length);
    }
 
    protected function exact_len(mixed $data, mixed $length): bool {
-      return (strlen(trim($data)) === $length);
+      return (strlen(trim((string) $data)) === $length);
+   }
+
+   protected function must_be_array(mixed $data): bool {
+      return is_array($data);
    }
 
    protected function alpha(mixed $data): bool {
